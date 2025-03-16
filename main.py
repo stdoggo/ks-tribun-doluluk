@@ -17,9 +17,9 @@ LOGIN_BTN_XPATH = "//button[@class='black-btn']"
 EMAIL_INPUT_XPATH = "//input[@placeholder='E-Posta Adresi']"
 PASSWORD_INPUT_XPATH = "//input[@placeholder='Şifre']"
 CAPTCHA_CHECKBOX_XPATH = "//*[contains(@id, 'cf-chl-widget-')]"
-CATEGORY_OPTION_XPATH = "//div[contains(text(),'Kategori')]"
-CATEGORY_OPTION_2_XPATH = "//div[contains(text(),'TRİBÜN')]"
-ALL_SEATS_XPATH = "//button[@id='custom_seat_button']"
+CATEGORY_OPTION_XPATH = "//*[@id='blocks']"
+SEAT_MAP_XPATH = "//button[@id='custom_seat_button']"
+ALL_SEATS_XPATH = "//*[@class='seat']"
 OCCUPIED_SEAT_XPATH = "//*[@fill='#7691a7']"
 AVAILABLE_SEAT_XPATH = "//*[@fill='#ffffff']"
 CHANGE_SEAT_XPATH = "//button[contains(text(),'Seçimi değiştir')]"
@@ -69,52 +69,47 @@ def login(driver):
 
 def count_seats(driver):
     total_occupied = 0
-    total_available = 0
-    end_category = False
+    total_count = 0
+    # end_category = False
     
     for category, blocks in zip(home_cat, home_block):
         try:
         # Select category
-            if end_category:
-                select_element(driver, CATEGORY_OPTION_2_XPATH).click()
-                end_category = False
-                driver.sleep(10)
-            else:
-                select_element(driver, CATEGORY_OPTION_XPATH).click()
+            driver.sleep(1)
+            driver.execute_script("window.scrollBy(0,300)")
+            select_element(driver, CATEGORY_OPTION_XPATH).click()
             select_element(driver, category).click()
             
-            for i, block in enumerate(blocks):
+            for block in blocks:
                 try:
                     # Select the next block
+                    driver.sleep(1)
+                    driver.execute_script("window.scrollBy(0,250)")
                     block_xpath = f"//option[contains(text(),'{block}')]"
                     select_element(driver, block_xpath).click()
 
                     # Open seat map of the selected block
-                    select_element(driver, ALL_SEATS_XPATH).click()
+                    select_element(driver, SEAT_MAP_XPATH).click()
                     driver.sleep(5)
 
                     # Count all seats in the block
+                    total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
                     occupied = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
-                    available = driver.find_elements(By.XPATH, AVAILABLE_SEAT_XPATH)
-
+                    
+                    total_count += len(total)
                     total_occupied += len(occupied)
-                    total_available += len(available)
-
+                    
                     # Change the block
                     select_element(driver, CHANGE_SEAT_XPATH).click()
 
-                    # Check if this is the last block in the category
-                    if i == len(blocks) - 1:
-                        end_category = True
-                        break
-                except Exception as e:
-                    print(f"Blok bulunamadı: {block}\n{e}")
+                except Exception as error:
+                    print(f"Blok dolu: {block}\n{error}")
                     continue
-        except Exception as e:
-            print(f"Kategori bulunamadı: {category}\n{e}")
+        except Exception as error:
+            print(f"Kategori dolu: {category}\n{error}")
             continue
         
-    return total_occupied, total_available
+    return total_count, total_occupied
 
 with SB(uc=True) as driver:
     driver.maximize_window()
@@ -130,15 +125,15 @@ with SB(uc=True) as driver:
     login(driver)
 
     # Count all seats
-    driver.execute_script("document.body.style.zoom='50%'")
-    total_occupied, total_available = count_seats(driver)
+    driver.execute_script("document.body.style.zoom='80%'")
+    total_count, total_occupied = count_seats(driver)
     
     # Calculate and print the result
     HOME_TOTAL = 31827
-    total_count = total_occupied + total_available
+    total_available = total_count - total_occupied
     full_blocks = HOME_TOTAL - total_count
     total_occupied += full_blocks
-    occupancy_rate = (total_occupied / HOME_TOTAL) * 100 if total_count > 0 else 0
+    occupancy_rate = (total_occupied / HOME_TOTAL) * 100
 
     bar_length = int(occupancy_rate / 6.25)
     empty_length = 16 - bar_length

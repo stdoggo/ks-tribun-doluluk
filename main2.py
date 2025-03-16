@@ -46,7 +46,7 @@ ticket_title = "Satılan bilet" if not AWAY_MODE else "Deplasman satılan bilet"
 URL = "https://www.passo.com.tr/tr/etkinlik/kocaelispor-sakaryaspor-trendyol-lig-mac-bileti-passo/8067331"
 
 # Max seats
-TOTAL_SEATS = 31827
+HOME_TOTAL = 31827
 
 # Function to select an element
 def select_element(driver, xpath, timeout=60):
@@ -113,7 +113,7 @@ with SB(uc=True) as driver:
     total_count = occupied_seats + available_seats
     full_blocks = TOTAL_SEATS - total_count
     occupied_seats += full_blocks
-    occupancy_rate = (occupied_seats / TOTAL_SEATS) * 100 if total_count > 0 else 0
+    occupancy_rate = (occupied_seats / HOME_TOTAL) * 100 if total_count > 0 else 0
 
     bar_length = int(occupancy_rate / 6.25)
     empty_length = 16 - bar_length
