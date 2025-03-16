@@ -144,4 +144,3 @@ with SB(uc=True) as driver:
         output += "\n🔥 KAPALI GİŞE"
     else:
         output += f" (Kalan: {total_available})"
-    print(output)
