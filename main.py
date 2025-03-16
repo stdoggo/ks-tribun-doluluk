@@ -141,7 +141,7 @@ with SB(uc=True) as driver:
     empty_length = 16 - bar_length
     occupancy_bar = "█" * bar_length + "░" * empty_length
 
-    output = f"{match}\n1. Lig tribün doluluk oranı\n{occupancy_bar} %{occupancy_rate:.2f}\n{title}: {total_occupied_seats} / {home_total}"
+    output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{title}: {total_occupied_seats} / {home_total}"
     if occupancy_rate == 100:
         output += "\n🔥 KAPALI GİŞE"
     else:
