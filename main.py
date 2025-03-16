@@ -70,7 +70,6 @@ def login(driver):
 def count_seats(driver):
     total_occupied = 0
     total_count = 0
-    # end_category = False
     
     for category, blocks in zip(home_cat, home_block):
         try:
