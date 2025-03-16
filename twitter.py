@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import tweepy
+from main import main
 
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
 
@@ -14,4 +15,6 @@ client = tweepy.Client(bearer_token, api_key, api_secret, access_token, access_t
 auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_secret)
 api = tweepy.API(auth)
 
-client.create_tweet(text="☠️1966☠️")
+output = main()
+
+client.create_tweet(text=output)

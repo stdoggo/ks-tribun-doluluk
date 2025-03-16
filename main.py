@@ -111,36 +111,42 @@ def count_seats(driver):
         
     return total_count, total_occupied
 
-with SB(uc=True) as driver:
-    driver.maximize_window()
-    driver.open(URL)
-    driver.sleep(2)
-    driver.execute_script("window.scrollBy(0,550)")
+def main():
+    with SB(uc=True) as driver:
+        driver.maximize_window()
+        driver.open(URL)
+        driver.sleep(2)
+        driver.execute_script("window.scrollBy(0,550)")
 
-    # Click "SATIN AL"
-    select_element(driver, BUY_BTN_XPATH).click()
-    driver.sleep(2)
-    
-    # Login
-    login(driver)
+        # Click "SATIN AL"
+        select_element(driver, BUY_BTN_XPATH).click()
+        driver.sleep(2)
+        
+        # Login
+        login(driver)
 
-    # Count all seats
-    driver.execute_script("document.body.style.zoom='80%'")
-    total_count, total_occupied = count_seats(driver)
-    
-    # Calculate and print the result
-    HOME_TOTAL = 31827
-    total_available = total_count - total_occupied
-    full_blocks = HOME_TOTAL - total_count
-    total_occupied += full_blocks
-    occupancy_rate = (total_occupied / HOME_TOTAL) * 100
+        # Count all seats
+        driver.execute_script("document.body.style.zoom='80%'")
+        total_count, total_occupied = count_seats(driver)
+        
+        # Calculate and print the result
+        HOME_TOTAL = 31827
+        total_available = total_count - total_occupied
+        full_blocks = HOME_TOTAL - total_count
+        total_occupied += full_blocks
+        occupancy_rate = (total_occupied / HOME_TOTAL) * 100
 
-    bar_length = int(occupancy_rate / 6.25)
-    empty_length = 16 - bar_length
-    occupancy_bar = "█" * bar_length + "░" * empty_length
+        bar_length = int(occupancy_rate / 6.25)
+        empty_length = 16 - bar_length
+        occupancy_bar = "█" * bar_length + "░" * empty_length
 
-    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied} / {HOME_TOTAL}"
-    if occupancy_rate == 100:
-        output += "\n🔥 KAPALI GİŞE"
-    else:
-        output += f" (Kalan: {total_available})"
+        output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied} / {HOME_TOTAL}"
+        if occupancy_rate == 100:
+            output += "\n🔥 KAPALI GİŞE"
+        else:
+            output += f" (Kalan: {total_available})"
+            
+    return output
+
+if __name__ == "__main__":
+    print(main())
