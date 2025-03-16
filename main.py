@@ -61,7 +61,7 @@ else:
 
 URL = "https://www.passo.com.tr/tr/etkinlik/kocaelispor-sakaryaspor-trendyol-lig-mac-bileti-passo/8067331"
 
-def wait_until_element(driver, xpath):
+def select_element(driver, xpath):
     return WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, xpath)))
 
 with SB(uc=True) as driver:
@@ -71,16 +71,16 @@ with SB(uc=True) as driver:
     driver.execute_script("window.scrollBy(0,550)")
 
     # Click "SATIN AL"
-    wait_until_element(driver, BUY_BTN_XPATH).click()
+    select_element(driver, BUY_BTN_XPATH).click()
     driver.sleep(2)
     
     # Login
-    wait_until_element(driver, EMAIL_INPUT_XPATH).send_keys(EMAIL)
-    wait_until_element(driver, PASSWORD_INPUT_XPATH).send_keys(PASSWORD)
-    # wait_until_element(driver, CAPTCHA_CHECKBOX_XPATH).click() + Keys.ENTER
+    select_element(driver, EMAIL_INPUT_XPATH).send_keys(EMAIL)
+    select_element(driver, PASSWORD_INPUT_XPATH).send_keys(PASSWORD)
+    # select_element(driver, CAPTCHA_CHECKBOX_XPATH).click() + Keys.ENTER
     pyautogui.click(675, 720)
     driver.sleep(1)
-    wait_until_element(driver, LOGIN_BTN_XPATH).click()
+    select_element(driver, LOGIN_BTN_XPATH).click()
 
     total_occupied_seats = 0
     total_available_seats = 0
@@ -90,21 +90,21 @@ with SB(uc=True) as driver:
         try:
         # Select category
             if end_category:
-                wait_until_element(driver, CATEGORY_OPTION_2_XPATH).click()
+                select_element(driver, CATEGORY_OPTION_2_XPATH).click()
                 end_category = False
                 driver.sleep(10)
             else:
-                wait_until_element(driver, CATEGORY_OPTION_XPATH).click()
-            wait_until_element(driver, category).click()
+                select_element(driver, CATEGORY_OPTION_XPATH).click()
+            select_element(driver, category).click()
             
             for i, block in enumerate(blocks):
                 try:
                     # Select the next block
                     block_xpath = f"//option[contains(text(),'{block}')]"
-                    wait_until_element(driver, block_xpath).click()
+                    select_element(driver, block_xpath).click()
 
                     # Open seat map of the selected block
-                    wait_until_element(driver, ALL_SEATS_XPATH).click()
+                    select_element(driver, ALL_SEATS_XPATH).click()
                     driver.sleep(5)
 
                     # Count all seats in the block
@@ -119,8 +119,8 @@ with SB(uc=True) as driver:
                     driver.sleep(2) 
 
                     # Select the category again
-                    wait_until_element(driver, CATEGORY_OPTION_XPATH).click()
-                    wait_until_element(driver, category).click()
+                    select_element(driver, CATEGORY_OPTION_XPATH).click()
+                    select_element(driver, category).click()
 
                     # Check if this is the last block in the category
                     if i == len(blocks) - 1:
