@@ -22,6 +22,7 @@ CATEGORY_OPTION_2_XPATH = "//div[contains(text(),'TRİBÜN')]"
 ALL_SEATS_XPATH = "//button[@id='custom_seat_button']"
 OCCUPIED_SEAT_XPATH = "//*[@fill='#7691a7']"
 AVAILABLE_SEAT_XPATH = "//*[@fill='#ffffff']"
+CHANGE_SEAT_XPATH = "//button[contains(text(),'Seçimi değiştir')]"
 
 # Seat info (home)
 home_cat = [
@@ -42,50 +43,35 @@ home_block = [
     ["318-B", "319", "320", "321", "322", "323", "324 KUZEY"]
 ]
 
-end_category = False
-
 # Seat info (away)
 AWAY_CATEGORY = "//span[contains(text(),'MİSAFİR')]"
 AWAY_BLOCK = "//option[contains(text(),'GÜNEY')]"
 
-# Team info
-away = False
+# Match info
+AWAY = False
 OPPONENT = "Sakaryaspor"
 
-if away:
-    match = f"{OPPONENT} - Kocaelispor"
-    title = "Deplasman satılan bilet"
-else:
-    match = f"Kocaelispor - {OPPONENT}"
-    title = "Satılan bilet"
+match_title = f"Kocaelispor - {OPPONENT}" if not AWAY else f"{OPPONENT} - Kocaelispor"
+ticket_title = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
 
 URL = "https://www.passo.com.tr/tr/etkinlik/kocaelispor-sakaryaspor-trendyol-lig-mac-bileti-passo/8067331"
 
-def select_element(driver, xpath):
+def select_element(driver, xpath, timeout=60):
     return WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, xpath)))
 
-with SB(uc=True) as driver:
-    driver.maximize_window()
-    driver.open(URL)
-    driver.sleep(2)
-    driver.execute_script("window.scrollBy(0,550)")
-
-    # Click "SATIN AL"
-    select_element(driver, BUY_BTN_XPATH).click()
-    driver.sleep(2)
-    
-    # Login
+def login(driver):
     select_element(driver, EMAIL_INPUT_XPATH).send_keys(EMAIL)
     select_element(driver, PASSWORD_INPUT_XPATH).send_keys(PASSWORD)
-    # select_element(driver, CAPTCHA_CHECKBOX_XPATH).click() + Keys.ENTER
+    driver.sleep(1)
     pyautogui.click(675, 720)
     driver.sleep(1)
     select_element(driver, LOGIN_BTN_XPATH).click()
 
-    total_occupied_seats = 0
-    total_available_seats = 0
-    home_total = 31827
-        
+def count_seats(driver):
+    total_occupied = 0
+    total_available = 0
+    end_category = False
+    
     for category, blocks in zip(home_cat, home_block):
         try:
         # Select category
@@ -108,42 +94,59 @@ with SB(uc=True) as driver:
                     driver.sleep(5)
 
                     # Count all seats in the block
-                    occupied_seats = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
-                    available_seats = driver.find_elements(By.XPATH, AVAILABLE_SEAT_XPATH)
+                    occupied = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
+                    available = driver.find_elements(By.XPATH, AVAILABLE_SEAT_XPATH)
 
-                    total_occupied_seats += len(occupied_seats)
-                    total_available_seats += len(available_seats)
+                    total_occupied += len(occupied)
+                    total_available += len(available)
 
-                    # Refresh the page
-                    driver.execute_script("window.location.reload()")
-                    driver.sleep(2) 
-
-                    # Select the category again
-                    select_element(driver, CATEGORY_OPTION_XPATH).click()
-                    select_element(driver, category).click()
+                    # Change the block
+                    select_element(driver, CHANGE_SEAT_XPATH).click()
 
                     # Check if this is the last block in the category
                     if i == len(blocks) - 1:
                         end_category = True
                         break
                 except Exception as e:
+                    print(f"Blok bulunamadı: {block}\n{e}")
                     continue
         except Exception as e:
+            print(f"Kategori bulunamadı: {category}\n{e}")
             continue
+        
+    return total_occupied, total_available
+
+with SB(uc=True) as driver:
+    driver.maximize_window()
+    driver.open(URL)
+    driver.sleep(2)
+    driver.execute_script("window.scrollBy(0,550)")
+
+    # Click "SATIN AL"
+    select_element(driver, BUY_BTN_XPATH).click()
+    driver.sleep(2)
     
-    # Calculate & Print Results
-    total_count = total_occupied_seats + total_available_seats
-    full_blocks = home_total - total_count
-    total_occupied_seats += full_blocks
-    occupancy_rate = (total_occupied_seats / home_total) * 100 if total_count > 0 else 0
+    # Login
+    login(driver)
+
+    # Count all seats
+    driver.execute_script("document.body.style.zoom='50%'")
+    total_occupied, total_available = count_seats(driver)
+    
+    # Calculate and print the result
+    HOME_TOTAL = 31827
+    total_count = total_occupied + total_available
+    full_blocks = HOME_TOTAL - total_count
+    total_occupied += full_blocks
+    occupancy_rate = (total_occupied / HOME_TOTAL) * 100 if total_count > 0 else 0
 
     bar_length = int(occupancy_rate / 6.25)
     empty_length = 16 - bar_length
     occupancy_bar = "█" * bar_length + "░" * empty_length
 
-    output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{title}: {total_occupied_seats} / {home_total}"
+    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied} / {HOME_TOTAL}"
     if occupancy_rate == 100:
         output += "\n🔥 KAPALI GİŞE"
     else:
-        output += f" (Kalan: {total_available_seats})"
+        output += f" (Kalan: {total_available})"
     print(output)
