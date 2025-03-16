@@ -139,11 +139,11 @@ def main():
         empty_length = 16 - bar_length
         occupancy_bar = "█" * bar_length + "░" * empty_length
 
-        output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied} / {HOME_TOTAL}"
+        output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied:,} / {HOME_TOTAL:,}"
         if occupancy_rate == 100:
             output += "\n🔥 KAPALI GİŞE"
         else:
-            output += f" (Kalan: {total_available})"
+            output += f" (Kalan: {total_available:,})"
             
     return output
 
