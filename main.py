@@ -4,6 +4,7 @@ from seleniumbase import SB
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 import pyautogui
 
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
@@ -15,7 +16,6 @@ BUY_BTN_XPATH = "//button[text()= 'SATIN AL']"
 LOGIN_BTN_XPATH = "//button[@class='black-btn']"
 EMAIL_INPUT_XPATH = "//input[@placeholder='E-Posta Adresi']"
 PASSWORD_INPUT_XPATH = "//input[@placeholder='Şifre']"
-CAPTCHA_CHECKBOX_XPATH = "//*[contains(@id, 'cf-chl-widget-')]"
 CATEGORY_DROPDOWN_XPATH = "//div[@id='blocks']"
 BLOCK_DROPDOWN_XPATH = "//select[@id='blocks']"
 CATEGORY_OPTIONS_XPATH = "//div[@class='dropdown-options']/div"
@@ -27,26 +27,7 @@ OCCUPIED_SEAT_XPATH = "//*[@fill='#7691a7']"
 AVAILABLE_SEAT_XPATH = "//*[@fill='#ffffff']"
 CHANGE_SEAT_XPATH = "//button[contains(text(),'Seçimi değiştir')]"
 
-# Seat info (home)
-home_cat = [
-    "//span[contains(text(),'NUMARALI ALT')]", "//span[contains(text(),'NUMARALI ÜST')]",
-    "//span[contains(text(),'MARATON ALT')]", "//span[contains(text(),'MARATON ÜST')]",
-    "//span[contains(text(),'GÜNEY KALE ARKASI ALT')]", "//span[contains(text(),'GÜNEY KALE ARKASI ÜST')]",
-    "//span[contains(text(),'KUZEY KALE ARKASI ALT')]", "//span[contains(text(),'KUZEY KALE ARKASI ÜST')]"
-]
-
-home_block = [
-    ["111-A", "111-B", "112", "113", "114", "115", "116"],
-    ["313", "314", "315-A", "315-B"],
-    ["101", "102", "103", "124-A", "124-B", "125", "126"],
-    ["301", "302", "303 DOĞU", "324 DOĞU", "325", "326" ,"327"],
-    ["204-A", "204-B", "205", "206", "207", "208", "209", "210"],
-    ["303 GÜNEY", "304", "305", "306", "307", "308", "309", "310", "311", "312"],
-    ["217-A", "217-B", "218", "219", "220", "221", "222", "223"],
-    ["318-B", "319", "320", "321", "322", "323", "324 KUZEY"]
-]
-
-# Seat info (away)
+# Away seat info
 AWAY_CATEGORY = "//span[contains(text(),'MİSAFİR')]"
 AWAY_BLOCK = "//option[contains(text(),'GÜNEY')]"
 
@@ -68,7 +49,7 @@ def see_options(driver, xpath, timeout=60):
 def login(driver):
     select_element(driver, EMAIL_INPUT_XPATH).send_keys(EMAIL)
     select_element(driver, PASSWORD_INPUT_XPATH).send_keys(PASSWORD)
-    driver.sleep(1)
+    driver.sleep(2)
     pyautogui.click(675, 720)
     driver.sleep(1)
     select_element(driver, LOGIN_BTN_XPATH).click()
@@ -87,7 +68,7 @@ def count_seats(driver):
     # Click the dropdown menu and wait for category options
     select_element(driver, CATEGORY_DROPDOWN_XPATH).click()
     driver.sleep(2)
-    print("Kategoriler yükleniyor...")
+    print("\nKategoriler yükleniyor...")
     see_options(driver, CATEGORY_OPTIONS_XPATH)
     category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
     select_element(driver, CATEGORY_DROPDOWN_XPATH).click()
@@ -105,7 +86,7 @@ def count_seats(driver):
             
             category_option = category_options[i]
             driver.sleep(1)
-            print(f"Trying to select category {i + 1}/{len(category_options)}:")
+            print(f"\nKategori {i + 1}/{len(category_options)} seçiliyor...")
             category_option.click()
             driver.sleep(1)
             # print(f"Seçili kategori: {category_option.text}")
@@ -113,7 +94,7 @@ def count_seats(driver):
             # Click dropdown menu and wait for category options
             select_element(driver, BLOCK_DROPDOWN_XPATH).click()
             driver.sleep(2)
-            print("Bloklar yükleniyor...")
+            print("\nBloklar yükleniyor...")
             see_options(driver, BLOCK_OPTIONS_XPATH)
 
             # Loop through blocks
@@ -126,9 +107,10 @@ def count_seats(driver):
                     if block_option == select_element(driver, NULL_OPTION_XPATH):
                         continue
                     driver.execute_script("window.scrollBy(0,250)")
+                    
                     driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
                     block_option.click()
-                    print(f"Seçili blok: {block_option.text}")
+                    print(f"\nSeçili blok: {block_option.text}...")
 
                     # Open seat map
                     select_element(driver, SEAT_MAP_XPATH).click()
@@ -141,13 +123,13 @@ def count_seats(driver):
                     total_count += len(total)
                     total_occupied += len(occupied)
                     
-                    print(f"Blok {block_option.text}:\nToplam koltuk = {len(total)}\nDolu koltuk = {len(occupied)}")
+                    print(f"\nBlok {block_option.text}:\nToplam koltuk = {len(total)}\nDolu koltuk = {len(occupied)}\nDoluluk oranı = %{len(occupied) / len(total) * 100:.2f}")
 
                     # Change block
                     select_element(driver, CHANGE_SEAT_XPATH).click()
 
                 except Exception as error:
-                    print(f"Blok dolu: {block_option.text}\n{error}")
+                    print(f"\nBlok dolu\n{error}")
                     continue
                 
             select_element(driver, CATEGORY_DROPDOWN_XPATH).click()
@@ -162,7 +144,12 @@ def count_seats(driver):
     return total_count, total_occupied
 
 def main():
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    chrome_options = Options()
+    chrome_options.add_argument(f"user-agent={user_agent}")
+    
     with SB(uc=True) as driver:
+        driver.driver_options = chrome_options
         driver.maximize_window()
         driver.open(URL)
         driver.sleep(2)

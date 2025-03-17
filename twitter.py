@@ -16,5 +16,7 @@ auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_
 api = tweepy.API(auth)
 
 output = main()
+recipient_id = "1838289631013671158"
+# api.send_direct_message(recipient_id, text=output)
 
 client.create_tweet(text=output)
