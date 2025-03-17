@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-import tweepy
+import tweepy # type: ignore
 from main import main
 
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
@@ -16,7 +16,7 @@ auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_
 api = tweepy.API(auth)
 
 output = main()
-recipient_id = "1838289631013671158"
-# api.send_direct_message(recipient_id, text=output)
+id = "1838289631013671158"
 
 client.create_tweet(text=output)
+# api.send_direct_message(id, text=output)
