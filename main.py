@@ -104,7 +104,6 @@ def count_seats(driver):
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
             
             category_option = category_options[i]
-            # driver.execute_script("arguments[0].scrollIntoView(true);", category_option)
             driver.sleep(1)
             print(f"Trying to select category {i + 1}/{len(category_options)}:")
             category_option.click()
@@ -128,7 +127,6 @@ def count_seats(driver):
                         continue
                     driver.execute_script("window.scrollBy(0,250)")
                     driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
-                    # see_options(driver, BLOCK_OPTIONS_XPATH)
                     block_option.click()
                     print(f"Seçili blok: {block_option.text}")
 
