@@ -132,7 +132,7 @@ def count_seats(driver):
 
                     # Open seat map
                     select_element(driver, SEAT_MAP_XPATH).click()
-                    driver.sleep(5)
+                    driver.sleep(7)
 
                     # Count seats
                     total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
