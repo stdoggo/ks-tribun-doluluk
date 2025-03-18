@@ -16,7 +16,10 @@ auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_
 api = tweepy.API(auth)
 
 output = main()
-id = "1838289631013671158"
+user_id = "1838289631013671158" #Kocaelispor Etkileşim Grubu
 
-client.create_tweet(text=output)
-# api.send_direct_message(id, text=output)
+tweet = client.create_tweet(text=output)
+
+# tweet_id = tweet.id
+# tweet_url = f"https://x.com/KSTribunDoluluk/status/{tweet_id}"
+# api.send_direct_message(user_id, output)
