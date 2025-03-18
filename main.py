@@ -39,7 +39,7 @@ AWAY_BLOCK = "//option[contains(text(),'GÜNEY')]"
 # Match info
 URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
 
-# Extract club name
+# Extract opponent name
 def extract_clubs(filename="club_list.txt"):
     try:
         with open(filename, "r", encoding="utf-8") as file:
@@ -48,6 +48,28 @@ def extract_clubs(filename="club_list.txt"):
         print(f"Dosya okunamadı\n{error}")
         
 teams = extract_clubs()
+
+def extract_match_details(driver, teams):
+    # Find match and extract the opponent details
+    match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH).text
+    opponent = next((team for team in teams if team in match_title), "Takım bulunamadı")
+    
+    # Find out if it's home or away game
+    if match_title.split(" - ")[0].strip() == "Kocaelispor":
+        AWAY = False
+    else:
+        AWAY = True
+    
+    # Extract match details
+    match_date = driver.find_element(By.XPATH, MATCH_DATE_XPATH).text
+    match_date_text = match_date.split("\n")
+    match_day = match_date_text[0]
+    match_time = match_date_text[1]
+    
+    match = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
+    ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
+    
+    return match, match_day, match_time, ticket
 
 # Wait for the element to load
 def wait_element(driver, xpath, timeout=60):
@@ -192,26 +214,9 @@ def main():
         driver.driver_options = chrome_options
         driver.maximize_window()
         driver.open(URL)
-        
-        # Find match and extract the opponent details
-        match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH).text
-        opponent = next((team for team in teams if team in match_title), "Takım bulunamadı")
-        
-        # Find if it's home or away game
-        if match_title.split(" - ")[0].strip() == "Kocaelispor":
-            AWAY = False
-        else:
-            AWAY = True
-        
+
         # Extract match details
-        match_date = driver.find_element(By.XPATH, MATCH_DATE_XPATH).text
-        match_date_text = match_date.split("\n")
-        match_day = match_date_text[0]
-        match_time = match_date_text[1]
-        
-        match = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
-        ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet" 
-        
+        match, match_day, match_time, ticket = extract_match_details(driver, teams)
         print(f"Maç: {match}\nTarih: {match_day}, {match_time}")
         
         # Click on the match
@@ -224,13 +229,13 @@ def main():
         wait_element(driver, BUY_BTN_XPATH).click()
         driver.sleep(2)
         
-        # Login
+        # Sign in passo.com.tr
         try:
             login(driver)
         except Exception as error:
-            print(f"Giriş yapılamadı, yeniden deneniyor...\n{error}")
-            driver.refresh()
-            login(driver)
+            print(f"Giriş yapılamadı, yeniden başlatılıyor...\n{error}")
+            main()
+            return
         
         # Calculate all seats
         total_count, total_occupied = count_seats(driver)

@@ -1,38 +1,38 @@
-Fatih Karagümrük
-Erzurumspor
-Bandırmaspor
-Gençlerbirliği
-İstanbulspor
-Çorum
-Boluspor
-Ümraniyespor
-Amed
-Iğdır
-Keçiörengücü
-Esenler Erokspor
-Pendikspor
-Sakaryaspor
-Ankaragücü
-Manisa
-Şanlıurfaspor
-Adanaspor
-Yeni Malatyaspor
-Galatasaray
-Fenerbahçe
-Samsunspor
-Beşiktaş
-Eyüpspor
-Gaziantep
-Göztepe
-Başakşehir
-Trabzonspor
-Kasımpaşa
-Rizespor
-Antalyaspor
-Konyaspor
-Alanyaspor
-Bodrum
-Sivasspor
-Kayserispor
-Hatayspor
 Adana Demirspor
+Adanaspor
+Alanyaspor
+Amed
+Ankaragücü
+Antalyaspor
+Bandırmaspor
+Başakşehir
+Beşiktaş
+Bodrum
+Boluspor
+Çorum
+Erzurumspor
+Esenler Erokspor
+Eyüpspor
+Fatih Karagümrük
+Fenerbahçe
+Galatasaray
+Gaziantep
+Gençlerbirliği
+Göztepe
+Hatayspor
+Iğdır
+İstanbulspor
+Kasımpaşa
+Kayserispor
+Keçiörengücü
+Konyaspor
+Manisa
+Pendikspor
+Rizespor
+Sakaryaspor
+Samsunspor
+Sivasspor
+Şanlıurfaspor
+Trabzonspor
+Ümraniyespor
+Yeni Malatyaspor
