@@ -41,10 +41,8 @@ URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=tr
 AWAY = False
 OPPONENT = "Sakaryaspor"
 
-home_or_away = f"Kocaelispor - {OPPONENT}" if not AWAY else f"{OPPONENT} - Kocaelispor"
-ticket_title = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
-
-URL = "https://www.passo.com.tr/tr/etkinlik/kocaelispor-sakaryaspor-trendyol-lig-mac-bileti-passo/8067331"
+match = f"Kocaelispor - {OPPONENT}" if not AWAY else f"{OPPONENT} - Kocaelispor"
+ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
 
 def wait_element(driver, xpath, timeout=60):
     return WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
@@ -83,20 +81,32 @@ def count_seats(driver):
         try:
             if i >= len(category_options):
                 break
-            driver.execute_script("window.scrollBy(0,100)")
-            wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
-            driver.sleep(2)
-            wait_options(driver, CATEGORY_OPTIONS_XPATH)            
-            category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
-            
-            category_option = category_options[i]
-            driver.sleep(1)
-            print(f"\nKategori {i + 1}/{len(category_options)} seçiliyor...")
-            category_option.click()
-            driver.sleep(1)
-            # print(f"Seçili kategori: {category_option.text}")
-
-            # Click dropdown menu and wait for category options
+            retry_count = 0
+            max_retries = 3
+            while retry_count < max_retries:
+                try:
+                    wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
+                    driver.sleep(2)
+                    wait_options(driver, CATEGORY_OPTIONS_XPATH)            
+                    category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
+                    
+                    category_option = category_options[i]
+                    driver.sleep(1)
+                    category_text = category_option.text.split(" - ")[0]
+                    print(f"\nKategori {category_text} ({i + 1}/{len(category_options)}) seçiliyor...")
+                    category_option.click()
+                    driver.sleep(1)
+                    break
+                except Exception as e:
+                    print(f"Kategori {i + 1} seçilemedi. Tekrar deneniyor ({retry_count + 1}/{max_retries})...\n{e}")
+                    retry_count += 1
+                    if retry_count == max_retries:
+                        print(f"Kategori {i + 1} atlanıyor...\n")
+                        break 
+                    #########################################################################
+            print(f"Seçili kategori: {category_text}")  ### şuna bak sorun çıkarabilir
+                    
+            # Click dropdown menu and wait for block options
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
             driver.sleep(2)
             print("\nBloklar yükleniyor...")
@@ -115,7 +125,7 @@ def count_seats(driver):
                         continue
                     driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
                     block_option.click()
-                    print(f"\nSeçili blok: {block_option.text}...")
+                    print(f"Seçili blok: {block_option.text}")
 
                     # Open seat map
                     wait_element(driver, SEAT_MAP_XPATH).click()
@@ -124,7 +134,7 @@ def count_seats(driver):
                     try:
                         wait_element(driver, OCCUPIED_SEAT_XPATH)
                     except Exception:
-                        print("\nDolu koltuk bulunamadı, devam ediliyor...")
+                        print("Dolu koltuk bulunamadı, devam ediliyor...")
 
                     # Count seats
                     total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
@@ -132,14 +142,10 @@ def count_seats(driver):
 
                     total_count += len(total)
                     total_occupied += len(occupied)
-                    
-                    print("\nToplam koltuk sayısı:", total_count)
-                    print("\nDolu koltuk sayısı:", total_occupied)
-                    
-                    print(f"\nBlok {block_option.text}:\nToplam koltuk = {len(total)}\nDolu koltuk = {len(occupied)}\nDoluluk oranı = %{len(occupied) / len(total) * 100:.2f}")
+                    print(f"Blok {block_option.text}:\nToplam koltuk = {len(total)}\nDolu koltuk = {len(occupied)}\nDoluluk oranı = %{len(occupied) / len(total) * 100:.2f}")
 
-                    driver.sleep(2)
                     # Change block
+                    driver.sleep(2)
                     wait_element(driver, CHANGE_SEAT_XPATH).click()
 
                 except Exception as error:
@@ -152,7 +158,7 @@ def count_seats(driver):
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
         except Exception as error:
-            print(f"Kategori dolu\n{error}")
+            print(f"\nKategori dolu\n{error}")
             continue
 
     return total_count, total_occupied
@@ -167,13 +173,14 @@ def main():
         driver.driver_options = chrome_options
         driver.maximize_window()
         driver.open(URL)
-        driver.sleep(2)
+        # driver.sleep(2)
         
         # Find match
         match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH)
         match_date = driver.find_element(By.XPATH, MATCH_DATE_XPATH)
         print(f"Maç: {match_title.text}\nTarih: {match_date.text}")
-        wait_element(driver, MATCH_URL_XPATH).click()
+        wait_element(driver, MATCH_URL_XPATH)
+        driver.click(MATCH_URL_XPATH)
         
         # Press the buy button
         driver.sleep(2)
@@ -197,7 +204,7 @@ def main():
         empty_length = 16 - bar_length
         occupancy_bar = "█" * bar_length + "░" * empty_length
         
-        output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket_title}: {total_occupied:,} / {HOME_TOTAL:,}"
+        output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
         if occupancy_rate == 100:
             output += "\n🔥 KAPALI GİŞE"
         else:
