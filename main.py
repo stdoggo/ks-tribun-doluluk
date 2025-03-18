@@ -103,8 +103,7 @@ def count_seats(driver):
                     if retry_count == max_retries:
                         print(f"Kategori {i + 1} atlanıyor...\n")
                         break 
-                    #########################################################################
-            print(f"Seçili kategori: {category_text}")  ### şuna bak sorun çıkarabilir
+            print(f"Seçili kategori: {category_text}")
                     
             # Click dropdown menu and wait for block options
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
