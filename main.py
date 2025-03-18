@@ -47,12 +47,16 @@ def extract_clubs(filename="club_list.txt"):
     except OSError as error:
         print(f"Dosya okunamadı\n{error}")
         
-teams = extract_clubs()
+clubs = extract_clubs()
 
-def extract_match_details(driver, teams):
+def extract_match_details(driver, clubs):
     # Find match and extract the opponent details
     match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH).text
-    opponent = next((team for team in teams if team in match_title), "Takım bulunamadı")
+    opponent = "Takım bulunamadı"
+    for club in clubs:
+        if club in match_title:
+            opponent = club
+            break
     
     # Find out if it's home or away game
     if match_title.split(" - ")[0].strip() == "Kocaelispor":
@@ -216,7 +220,7 @@ def main():
         driver.open(URL)
 
         # Extract match details
-        match, match_day, match_time, ticket = extract_match_details(driver, teams)
+        match, match_day, match_time, ticket = extract_match_details(driver, clubs)
         print(f"Maç: {match}\nTarih: {match_day}, {match_time}")
         
         # Click on the match
@@ -230,12 +234,7 @@ def main():
         driver.sleep(2)
         
         # Sign in passo.com.tr
-        try:
-            login(driver)
-        except Exception as error:
-            print(f"Giriş yapılamadı, yeniden başlatılıyor...\n{error}")
-            main()
-            return
+        login(driver)
         
         # Calculate all seats
         total_count, total_occupied = count_seats(driver)
