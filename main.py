@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import pyautogui
 
+# Login credentials
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
@@ -38,18 +39,25 @@ AWAY_BLOCK = "//option[contains(text(),'GÜNEY')]"
 # Match info
 URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
 
-AWAY = False
-OPPONENT = "Sakaryaspor"
+# Extract club name
+def extract_clubs(filename="club_list.txt"):
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return [line.strip() for line in file.readlines()]
+    except OSError as error:
+        print(f"Dosya okunamadı\n{error}")
+        
+teams = extract_clubs()
 
-match = f"Kocaelispor - {OPPONENT}" if not AWAY else f"{OPPONENT} - Kocaelispor"
-ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
-
+# Wait for the element to load
 def wait_element(driver, xpath, timeout=60):
     return WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
 
+# Wait for dropdown menu options to load
 def wait_options(driver, xpath, timeout=60):
     return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
 
+# Sign in passo.com.tr
 def login(driver):
     wait_element(driver, EMAIL_INPUT_XPATH).send_keys(EMAIL)
     wait_element(driver, PASSWORD_INPUT_XPATH).send_keys(PASSWORD)
@@ -58,9 +66,12 @@ def login(driver):
     driver.sleep(1)
     wait_element(driver, LOGIN_BTN_XPATH).click()
 
+# Count seats function
 def count_seats(driver):
     total_occupied = 0
     total_count = 0
+    
+    # Dismiss cookie message
     try:
         cookie_button = driver.find_element(By.XPATH, "//a[@aria-label='dismiss cookie message']")
         cookie_button.click()
@@ -81,31 +92,37 @@ def count_seats(driver):
         try:
             if i >= len(category_options):
                 break
+            
+            # Loop through categories and retry selecting if an index is skipped
             retry_count = 0
             max_retries = 3
             while retry_count < max_retries:
                 try:
+                    # Open dropdown menu and wait for category options
                     wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
                     driver.sleep(2)
                     wait_options(driver, CATEGORY_OPTIONS_XPATH)            
                     category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
                     
+                    #Select a category option
                     category_option = category_options[i]
                     driver.sleep(1)
-                    category_text = category_option.text.split(" - ")[0]
-                    print(f"\nKategori {category_text} ({i + 1}/{len(category_options)}) seçiliyor...")
+                    category_name = category_option.text.split(" - ")[0]
+                    print(f"\nKategori {category_name} ({i + 1}/{len(category_options)}) seçiliyor...")
                     category_option.click()
                     driver.sleep(1)
                     break
+                
                 except Exception as e:
                     print(f"Kategori {i + 1} seçilemedi. Tekrar deneniyor ({retry_count + 1}/{max_retries})...\n{e}")
                     retry_count += 1
                     if retry_count == max_retries:
                         print(f"Kategori {i + 1} atlanıyor...\n")
                         break 
-            print(f"Seçili kategori: {category_text}")
                     
-            # Click dropdown menu and wait for block options
+            print(f"Seçili kategori: {category_name}")
+                    
+            # Open dropdown menu and wait for block options
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
             driver.sleep(2)
             print("\nBloklar yükleniyor...")
@@ -115,20 +132,22 @@ def count_seats(driver):
             block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
             for j in range(len(block_options)):
                 try:
-                    # driver.execute_script("window.scrollBy(0,350)")
+                    # Wait for block options
                     wait_options(driver, BLOCK_OPTIONS_XPATH)
                     driver.sleep(1)
                     block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+                    
+                    # Selet a block option
                     block_option = block_options[j]
                     if block_option == wait_element(driver, NULL_OPTION_XPATH):
                         continue
                     driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
                     block_option.click()
-                    print(f"Seçili blok: {block_option.text}")
+                    print(f"\nSeçili blok: {block_option.text}")
 
-                    # Open seat map
+                    # Open seat map of the block
                     wait_element(driver, SEAT_MAP_XPATH).click()
-                    print("\nKoltuklar sayılıyor...")
+                    print("Koltuklar sayılıyor...")
                     wait_element(driver, ALL_SEATS_XPATH)
                     try:
                         wait_element(driver, OCCUPIED_SEAT_XPATH)
@@ -150,7 +169,8 @@ def count_seats(driver):
                 except Exception as error:
                     print(f"\nBlok dolu\n{error}")
                     continue
-                
+            
+            # Re-select category dropdown menu
             wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
             driver.sleep(2)
             wait_options(driver, CATEGORY_OPTIONS_XPATH)
@@ -172,27 +192,50 @@ def main():
         driver.driver_options = chrome_options
         driver.maximize_window()
         driver.open(URL)
-        # driver.sleep(2)
         
-        # Find match
-        match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH)
-        match_date = driver.find_element(By.XPATH, MATCH_DATE_XPATH)
-        print(f"Maç: {match_title.text}\nTarih: {match_date.text}")
+        # Find match and extract the opponent details
+        match_title = driver.find_element(By.XPATH, MATCH_TITLE_XPATH).text
+        opponent = next((team for team in teams if team in match_title), "Takım bulunamadı")
+        
+        # Find if it's home or away game
+        if match_title.split(" - ")[0].strip() == "Kocaelispor":
+            AWAY = False
+        else:
+            AWAY = True
+        
+        # Extract match details
+        match_date = driver.find_element(By.XPATH, MATCH_DATE_XPATH).text
+        match_date_text = match_date.split("\n")
+        match_day = match_date_text[0]
+        match_time = match_date_text[1]
+        
+        match = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
+        ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet" 
+        
+        print(f"Maç: {match}\nTarih: {match_day}, {match_time}")
+        
+        # Click on the match
         wait_element(driver, MATCH_URL_XPATH)
         driver.click(MATCH_URL_XPATH)
         
-        # Press the buy button
+        # Click on the buy button
         driver.sleep(2)
         driver.execute_script("window.scrollBy(0,550)")
         wait_element(driver, BUY_BTN_XPATH).click()
         driver.sleep(2)
         
         # Login
-        login(driver)
-        # Count all seats
+        try:
+            login(driver)
+        except Exception as error:
+            print(f"Giriş yapılamadı, yeniden deneniyor...\n{error}")
+            driver.refresh()
+            login(driver)
+        
+        # Calculate all seats
         total_count, total_occupied = count_seats(driver)
         
-        # Calculate and print the result
+        # Calculate and print the results
         HOME_TOTAL = 31827
         total_available = total_count - total_occupied
         full_blocks = HOME_TOTAL - total_count
