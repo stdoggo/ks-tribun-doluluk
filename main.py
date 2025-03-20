@@ -186,7 +186,7 @@ def count_seats(driver):
 
             # Open dropdown menu and wait for block options
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            print("\nBloklar yükleniyor...")
+            print("Bloklar yükleniyor...")
             wait_options(driver, BLOCK_OPTIONS_XPATH)
             block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
             
