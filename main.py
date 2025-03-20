@@ -104,13 +104,13 @@ def select_category(driver, category_options, index):
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
             category_option = category_options[index]
+            category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
             if category_option.get_attribute("class") == "dropdown-option disabled":
-                print(f"Kategori {index + 1} dolu, atlanıyor...")
+                print(f"Kategori {category_name} ({index + 1}/{len(category_options)}) dolu, atlanıyor...")
                 return None
             
-            category_name = category_option.text.split(" - ")[0]
             print(f"\nKategori {category_name} ({index + 1}/{len(category_options)}) seçiliyor...")
             category_option.click()
             return category_name
@@ -209,8 +209,8 @@ def count_seats(driver):
             wait_options(driver, CATEGORY_OPTIONS_XPATH)
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
-        except Exception as error:
-            print(f"\nKategori dolu\n{error}")
+        except Exception:
+            print(f"\nKategorideki tüm bloklar sayıldı")
             continue
 
     return total_count, total_occupied
