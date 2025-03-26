@@ -101,7 +101,7 @@ def select_category(driver, category_options, index):
     while retry_count < max_retries:
         try:
             wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
-            wait_options(driver, CATEGORY_OPTIONS_XPATH)
+            # wait_options(driver, CATEGORY_OPTIONS_XPATH)
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
             category_option = category_options[index]
