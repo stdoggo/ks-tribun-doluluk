@@ -217,13 +217,13 @@ def count_seats(driver):
     return total_count, total_occupied
 
 def main():
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
-    chrome_options = Options()
-    chrome_options.add_argument(f"user-agent={user_agent}")
+    # user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
+    # chrome_options = Options()
+    # chrome_options.add_argument(f"user-agent={user_agent}")
     
     with SB(uc=True) as driver:
         # Open the browser
-        driver.driver_options = chrome_options
+        # driver.driver_options = chrome_options
         driver.maximize_window()
         driver.open(URL)
 
