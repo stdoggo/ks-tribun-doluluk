@@ -72,7 +72,7 @@ if response.status_code == 201:
     try:
         if short_url:
             original_tweet_id = tweet.data["id"]
-            reply_text = f"Blok doluluk oranları için aşağıdaki bağlantıyı ziyaret edebilirsiniz:\n{short_url}"
+            reply_text = f"Blok doluluk oranları için:\n{short_url}"
             client.create_tweet(text=reply_text, in_reply_to_tweet_id=original_tweet_id)
     except Exception as e:
         print("Blok doluluk URL'sini paylaşırken hata:", e)
