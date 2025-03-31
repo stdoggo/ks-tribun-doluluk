@@ -264,7 +264,7 @@ def main():
             total_count, total_occupied = count_seats(driver)
             
             # Calculate and print the results
-            HOME_TOTAL = 31827
+            HOME_TOTAL = 31827 + 1775
             total_available = total_count - total_occupied
             full_blocks = HOME_TOTAL - total_count
             total_occupied += full_blocks

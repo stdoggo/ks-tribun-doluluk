@@ -1,10 +1,12 @@
 import os
-from dotenv import load_dotenv
-import tweepy  # type: ignore
-from main import main
 import requests
-from datetime import datetime
 import pytz
+import time
+import tweepy
+from tweepy.errors import TooManyRequests
+from dotenv import load_dotenv
+from main import main
+from datetime import datetime
 
 # Date of the data
 timezone = pytz.timezone("Europe/Istanbul")
@@ -28,12 +30,13 @@ client = tweepy.Client(bearer_token, api_key, api_secret, access_token, access_t
 auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_secret)
 api = tweepy.API(auth)
 
-# Step 1: Run main script and get the output
+# Run main script and get the output
 output = main()
 tweet = client.create_tweet(text=output)
 
+# Upload output.txt
 filename = "output.txt"
-description = f"Blok doluluk durumu {current_date}"
+description = f"Blok doluluk durumu ({current_date})"
 public = True
 
 with open(filename, "r", encoding="utf-8") as f:
@@ -58,12 +61,14 @@ response = requests.post(
     }
 )
 
+# Shorten github url
 def shorten_url(long_url):
     response = requests.get(f"http://tinyurl.com/api-create.php?url={long_url}")
     if response.status_code == 200:
         return response.text
     return None
 
+# Tweet url as a reply
 if response.status_code == 201:
     gist_data = response.json()
     gist_url = gist_data["html_url"]
@@ -75,7 +80,7 @@ if response.status_code == 201:
             reply_text = f"Blok doluluk oranları için:\n{short_url}"
             client.create_tweet(text=reply_text, in_reply_to_tweet_id=original_tweet_id)
     except Exception as e:
-        print("Blok doluluk URL'sini paylaşırken hata:", e)
+        print("URL paylaşılırken hata:", e)
 else:
     pass
 
