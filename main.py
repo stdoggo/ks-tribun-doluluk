@@ -1,14 +1,15 @@
 import os
 import sys
+import pytz
+import requests
+import pyautogui
 from dotenv import load_dotenv
+from datetime import datetime
 from seleniumbase import SB
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import pyautogui
-from datetime import datetime
-import pytz
 
 # Date of the data
 timezone = pytz.timezone("Europe/Istanbul")
@@ -16,8 +17,10 @@ current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
 # Login credentials
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
+
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
+github_token = os.getenv("GITHUB_TOKEN")
 
 # XPaths
 BUY_BTN_XPATH = "//button[text()= 'SATIN AL']"
@@ -45,8 +48,54 @@ NO_SEATS_POPUP_XPATH = "//button[contains(text(),'Tamam')]"
 AWAY_CATEGORY = "//span[contains(text(),'MİSAFİR')]"
 AWAY_BLOCK = "//option[contains(text(),'GÜNEY')]"
 
-# Match info
-URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
+# Shorten github URL
+def shorten_url(long_url):
+    response = requests.get(f"http://tinyurl.com/api-create.php?url={long_url}")
+    if response.status_code == 200:
+        return response.text
+    return None
+
+# Upload output.txt to Github
+def upload_to_gist():
+    filename = "output.txt"
+    description = f"Blok doluluk durumu ({current_date})"
+    public = True
+
+    with open(filename, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    payload = {
+        "description": description,
+        "public": public,
+        "files": {
+            filename: {
+                "content": content
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            "https://api.github.com/gists",
+            json=payload,
+            headers={
+                "Authorization": f"token {github_token}",
+                "Accept": "application/vnd.github+json"
+            }
+        )
+
+        if response.status_code == 201:  # HTTP 201 Created
+            gist_data = response.json()
+            raw_url = list(gist_data["files"].values())[0]["raw_url"]
+            short_url = shorten_url(raw_url)
+            return short_url
+        else:
+            print(f"Hata kodu: {response.status_code}")
+            print(f"{response.text}")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Hata: {e}")
+        return None
 
 # Extract opponent name
 def extract_clubs(filename="club_list.txt"):
@@ -226,9 +275,10 @@ def count_seats(driver):
 
     return total_count, total_occupied
 
-import sys
-
 def main():
+    # Passo URL
+    URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
+    
     # Redirect all printed output to a text file
     with open("output.txt", "w", encoding="utf-8") as file:
         sys.stdout = file
@@ -274,13 +324,16 @@ def main():
             occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
             
             output = f"\n{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
-            if occupancy_rate == 100:
-                output += "\n🔥 KAPALI GİŞE"
-            else:
-                output += f" (Kalan: {total_available:,})"
-
-    # Restore stdout to its original state
+                    
     sys.stdout = sys.__stdout__
+    
+    if occupancy_rate == 100:
+        output += "\n🔥 KAPALI GİŞE"
+    else:
+        output += f" (Kalan: {total_available:,})"
+        short_url = upload_to_gist()
+        if short_url:
+            output += f"\nBloklar: {short_url}"
     return output 
 
 if __name__ == "__main__":
