@@ -325,8 +325,10 @@ def main():
             
             output = f"\n{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
                     
+    # Return stdout to its original state
     sys.stdout = sys.__stdout__
     
+    # Add more info
     if occupancy_rate == 100:
         output += "\n🔥 KAPALI GİŞE"
     else:
