@@ -323,7 +323,7 @@ def main():
             bar_length = int(occupancy_rate / 6.25)
             occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
             
-            output = f"\n{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
+            output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
                     
     # Return stdout to its original state
     sys.stdout = sys.__stdout__
