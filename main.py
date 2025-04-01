@@ -275,6 +275,26 @@ def count_seats(driver):
 
     return total_count, total_occupied
 
+def calculate_occupancy(driver, match, ticket):
+    # Calculate all seats
+    total_count, total_occupied = count_seats(driver)
+    total_available = total_count - total_occupied
+    
+    # Subtract the fixed number from total_count since full blocks are not available on the website
+    HOME_TOTAL = 31827
+    full_blocks = HOME_TOTAL - total_count
+    total_occupied += full_blocks
+    
+    # Calculate the occupancy rate and create an occupancy bar
+    occupancy_rate = (total_occupied / HOME_TOTAL) * 100
+    bar_length = int(occupancy_rate / 6.25)
+    occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+    
+    # Final output
+    output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
+    
+    return output, occupancy_rate, total_available
+
 def main():
     # Passo URL
     URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
@@ -310,20 +330,8 @@ def main():
             # Sign in passo.com.tr
             login(driver)
             
-            # Calculate all seats
-            total_count, total_occupied = count_seats(driver)
-            
-            # Calculate and print the results
-            HOME_TOTAL = 31827 + 1775
-            total_available = total_count - total_occupied
-            full_blocks = HOME_TOTAL - total_count
-            total_occupied += full_blocks
-            occupancy_rate = (total_occupied / HOME_TOTAL) * 100
-            
-            bar_length = int(occupancy_rate / 6.25)
-            occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
-            
-            output = f"{match}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {HOME_TOTAL:,}"
+            # Calculate the occupancy rate
+            output, occupancy_rate, total_available = calculate_occupancy(driver, match, ticket)
                     
     # Return stdout to its original state
     sys.stdout = sys.__stdout__
