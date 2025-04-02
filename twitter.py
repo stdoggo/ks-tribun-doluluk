@@ -1,9 +1,13 @@
 import os
+import time
+import pytz
 import tweepy
+import schedule
 from dotenv import load_dotenv
 from main import main
+from datetime import datetime, timedelta
 
-# .env file
+# Load .env
 load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
 
 # Twitter credentials
@@ -18,12 +22,48 @@ client = tweepy.Client(bearer_token, api_key, api_secret, access_token, access_t
 auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_secret)
 api = tweepy.API(auth)
 
-# Run main script and get the output
-output = main()
-tweet = client.create_tweet(text=output)
+# Timezone
+timezone = pytz.timezone("Europe/Istanbul")
 
-##### oto dm paralı olmuş çalışmıyor
-# tweet_id = tweet.data["id"]
-# user_id = "user_id"
-# tweet_url = f"https://x.com/KSTribunDoluluk/status/{tweet_id}"
-# api.send_direct_message(user_id, tweet_url)
+# Get output and match date from the main script
+output, match_date = main()
+
+# Schedule tweets
+def schedule_tweets():
+    schedule.clear()
+    current_date = datetime.now(timezone)
+    remaining_days = (match_date - current_date).days
+
+    if remaining_days >= 4:
+        # 4 or more days left
+        tweet_hours = ["11:50", "19:50"]
+        
+    elif 0 <= remaining_days < 4:
+        # 0-4 days left
+        tweet_hours = ["11:50", "15:50", "19:50"]
+        
+    elif remaining_days == 0:
+        # Match day
+        match_hour = match_date.strftime("%H:%M")
+        tweet_hours = [h for h in ["09:50", "11:50", "13:50", "15:50", "17:50"] if h < match_hour]
+        tweet_hours.append((match_date - timedelta(minutes=10)).strftime("%H:%M"))
+        
+    else:
+        # After the match
+        tweet_hours = ["12:00"]
+
+    for time in tweet_hours:
+        schedule.every().day.at(time).do(post_tweet)
+
+# Post the tweet
+def post_tweet():
+    try:
+        client.create_tweet(text=output)
+    except Exception as e:
+        print(f"Twit atılırken hata: {e}")
+
+# Main loop
+schedule_tweets()
+while True:
+    schedule.run_pending()
+    time.sleep(60)
