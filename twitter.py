@@ -5,6 +5,7 @@ import tweepy
 import schedule
 from dotenv import load_dotenv
 from main import main
+from main import extract_match_details
 from datetime import datetime, timedelta
 
 # Load .env
@@ -26,7 +27,8 @@ api = tweepy.API(auth)
 timezone = pytz.timezone("Europe/Istanbul")
 
 # Get output and match date from the main script
-output, match_date = main()
+output = main()
+match_date = extract_match_details()
 
 # Schedule tweets
 def schedule_tweets():

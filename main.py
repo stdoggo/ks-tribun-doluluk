@@ -1,8 +1,12 @@
+# TODO: away olmama sorununu düzelt
+#       away olunca -1. indexten başlamama sorununu düzelt
+
 import os
 import time
 import pytz
 import requests
 import pyautogui
+import locale
 from requests.exceptions import RequestException
 from contextlib import redirect_stdout
 from dotenv import load_dotenv
@@ -25,6 +29,10 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
+# Seat info
+TOTAL_SEATS = 0
+URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
+
 # XPaths
 BUY_BTN_XPATH = "//button[text()= 'SATIN AL']"
 LOGIN_BTN_XPATH = "//button[@class='black-btn']"
@@ -46,6 +54,7 @@ MATCH_DATE_XPATH = "//span[@class='r-date']"
 MATCH_TIME_XPATH = "//span[@class='r-date']/div"
 MATCH_URL_XPATH = "//div[@class='wrapper row event-search-items']/div[1]/div/div/div[2]"
 NO_SEATS_POPUP_XPATH = "//button[contains(text(),'Tamam')]"
+COOKIE_MESSAGE_XPATH = "//a[@aria-label='dismiss cookie message']"
 
 # Shorten github URL
 def shorten_url(long_url):
@@ -125,18 +134,21 @@ def extract_match_details(driver):
         clubs = extract_clubs()
         match_text = wait_element(driver, MATCH_TITLE_XPATH).text
         opponent = next((club for club in clubs if club in match_text), "Takım bulunamadı")
-        
+        if "Spor" in opponent:
+            opponent = opponent.replace("Spor", "spor").replace(" ", "")
+
         # Find out if it's home or away game
         AWAY = match_text.split(" - ")[0].strip() != "Kocaelispor"
-        
+
         # Extract match details
-        match_date = wait_element(driver, MATCH_DATE_XPATH).text.replace("\n", " ")
-        match_date = datetime.strptime(match_date, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
-        
+        locale.setlocale(locale.LC_TIME, "tr_TR.UTF-8")
+        match_date_str = wait_element(driver, MATCH_DATE_XPATH).text.replace("\n", " ")
+        match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
+
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
         ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
-        
-        return match_title, match_date, ticket
+
+        return match_title, match_date, ticket, AWAY
     except Exception:
         return None
     
@@ -147,10 +159,14 @@ def login(driver, attempts=5, delay=20):
             driver.sleep(2)
             wait_element(driver, EMAIL_INPUT_XPATH, timeout=10).send_keys(EMAIL)
             wait_element(driver, PASSWORD_INPUT_XPATH, timeout=10).send_keys(PASSWORD)
+            
             driver.sleep(2)
             CHECKBOX_COORDS = (675, 720)
             pyautogui.click(*CHECKBOX_COORDS)
             wait_element(driver, LOGIN_BTN_XPATH, timeout=10).click()
+            
+            return
+        
         except TimeoutException:
             # print("Giriş başarısız, tekrar deneniyor...")
             time.sleep(delay)
@@ -158,15 +174,17 @@ def login(driver, attempts=5, delay=20):
     raise Exception
         
 # Selects a category from the dropdown menu
-def select_category(driver, category_options, index):
+def select_category(driver, category_options, index, AWAY):
+
+    AWAY = extract_match_details(driver)
     
     retry_count = 0
     max_retries = 3
     while retry_count < max_retries:
         try:
             wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
-            category_options = wait_element(driver, CATEGORY_OPTIONS_XPATH)
-            category_option = category_options[index]
+            category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
+            category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
@@ -188,7 +206,7 @@ def select_category(driver, category_options, index):
 def select_block(driver, block_options, index):
     try:
         wait_options(driver, BLOCK_OPTIONS_XPATH)
-        block_options = wait_element(driver, BLOCK_OPTIONS_XPATH)
+        block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
 
         block_option = block_options[index]
         if block_option == wait_element(driver, NULL_OPTION_XPATH):
@@ -219,84 +237,99 @@ def count_block_seats(driver):
         return 0, 0
 
 # Main function to count seats
-def count_seats(driver):
+def count_seats(driver, AWAY):
     total_occupied, total_count = 0, 0
 
-    # Dismiss cookie meassage if it appears
-    safe_click(driver, "//a[@aria-label='dismiss cookie message']")
-
-    # Find out if it's an away game
-    AWAY = extract_match_details(driver)
+    # Dismiss cookie message if it appears
+    safe_click(driver, COOKIE_MESSAGE_XPATH)
 
     # Click the dropdown menu and wait for category options
     wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
     driver.sleep(2)
-    # print("\nKategoriler yükleniyor...")
     wait_options(driver, CATEGORY_OPTIONS_XPATH)
-    category_options = wait_element(driver, CATEGORY_OPTIONS_XPATH)
-    wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
+    category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
-    for i in range(1 if AWAY else len(category_options)):
-        try:
-            if i >= len(category_options):
-                break
-            
-            category_name = select_category(driver, category_options, -1 if AWAY else i)
-            if not category_name:
-                continue
-            
+    if AWAY:
+        # Only select the last index for away matches
+        index = len(category_options) - 1
+        category_name = select_category(driver, category_options, index, AWAY)
+
+        if category_name:
             # Category header
             print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
-
-            # Open dropdown menu and wait for block options
-            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            # print("Bloklar yükleniyor...")
-            wait_options(driver, BLOCK_OPTIONS_XPATH)
-            block_options = wait_element(driver, BLOCK_OPTIONS_XPATH)
             
+            # Select a block from the dropdown menu
+            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
+            wait_options(driver, BLOCK_OPTIONS_XPATH)
+            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+
             for j in range(len(block_options)):
                 block_name = select_block(driver, block_options, j)
                 if not block_name:
                     continue
 
+                # Calculate seats
                 total, occupied = count_block_seats(driver)
                 total_count += total
                 total_occupied += occupied
 
-                # Change block
+                # Click 'Change seat'
+                wait_element(driver, CHANGE_SEAT_XPATH).click()
+    else:
+        for i in range(len(category_options)):
+            category_name = select_category(driver, category_options, i, AWAY)
+            
+            if not category_name:
+                continue
+
+            # Category header
+            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+            
+            # Select a block from the dropdown menu
+            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
+            wait_options(driver, BLOCK_OPTIONS_XPATH)
+            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+
+            # Loop through all blocks
+            for j in range(len(block_options)):
+                block_name = select_block(driver, block_options, j)
+                if not block_name:
+                    continue
+
+                # Calculate seats
+                total, occupied = count_block_seats(driver)
+                total_count += total
+                total_occupied += occupied
+
+                # Click 'Change seat'
                 wait_element(driver, CHANGE_SEAT_XPATH).click()
 
-            # Re-select category dropdown menu
-            if AWAY:
-                pass
-            else:
-                wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
-                wait_options(driver, CATEGORY_OPTIONS_XPATH)
-                category_options = wait_element(driver, CATEGORY_OPTIONS_XPATH)
-
-        except Exception:
-            # print(f"\nKategorideki tüm bloklar sayıldı\n")
-            continue
+            # Re-open category dropdown
+            wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
+            wait_options(driver, CATEGORY_OPTIONS_XPATH)
+            category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
     return total_count, total_occupied, category_options
 
-def calculate_occupancy(driver, match_title, ticket):
+def calculate_occupancy(driver, match_title, ticket, AWAY):
+    global TOTAL_SEATS
+    
     # Calculate all seats
-    total_count, total_occupied, category_options = count_seats(driver)
+    total_count, total_occupied, category_options = count_seats(driver, AWAY)
     total_available = total_count - total_occupied
     
-    # Subtract a fixed number from total count since full blocks are not available on the website
-    AWAY = extract_match_details(driver)
+    # Determine the total seat number
     if AWAY:
         TOTAL_SEATS = 600
     else:
         if len(category_options) == 8:
             TOTAL_SEATS = 31827 
         elif len(category_options) == 6:
-            TOTAL_SEATS = 23770 
+            TOTAL_SEATS = 23770
         else:
             TOTAL_SEATS = 31827
-
+    
+    # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
     total_occupied += full_blocks
     
@@ -312,7 +345,6 @@ def calculate_occupancy(driver, match_title, ticket):
 
 def main():
     # Passo URL
-    URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
     
     # Redirect all printed output to a text file
     with open("output.txt", "w", encoding="utf-8") as file:
@@ -328,7 +360,7 @@ def main():
                 if not match_details: 
                     return
                 
-                match_title, match_date, ticket = match_details
+                match_title, match_date, ticket, AWAY = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
                 print(f"\nMaç: {match_title}\nTarih: {match_date}")
         
@@ -345,7 +377,8 @@ def main():
                 login(driver)
                 
                 # Calculate the occupancy rate
-                output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket)
+                driver.execute_script("document.body.style.zoom='80%'")
+                output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY)
     
     # Add more info
     if occupancy_rate == 100:
