@@ -19,7 +19,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 
 # Login credentials
-load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
+load_dotenv(dotenv_path='keys.env')
 
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
@@ -344,8 +344,6 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
     return output, occupancy_rate, total_available
 
 def main():
-    # Passo URL
-    
     # Redirect all printed output to a text file
     with open("output.txt", "w", encoding="utf-8") as file:
         
@@ -388,7 +386,8 @@ def main():
         short_url = upload_to_gist()
         if short_url:
             output += f"\nKalan bloklar: {short_url}"
-    return output 
+            
+    return output, match_date
 
 if __name__ == "__main__":
     print(main())

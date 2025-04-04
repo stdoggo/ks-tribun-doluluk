@@ -9,7 +9,7 @@ from main import extract_match_details
 from datetime import datetime, timedelta
 
 # Load .env
-load_dotenv(dotenv_path='../ks-tribun-doluluk/keys.env')
+load_dotenv(dotenv_path='keys.env')
 
 # Twitter credentials
 api_key = os.getenv("API_KEY")
@@ -23,12 +23,17 @@ client = tweepy.Client(bearer_token, api_key, api_secret, access_token, access_t
 auth = tweepy.OAuth1UserHandler(api_key, api_secret, access_token, access_token_secret)
 api = tweepy.API(auth)
 
-# Timezone
-timezone = pytz.timezone("Europe/Istanbul")
-
 # Get output and match date from the main script
-output = main()
-match_date = extract_match_details()
+result = main()
+if result:
+    output, match_date = result
+    print(output)
+else:
+    print("No data returned from main()")
+
+# Convert match date to date format
+timezone = pytz.timezone("Europe/Istanbul")
+match_date = timezone.localize(datetime.strptime(match_date, "%Y-%m-%d %H:%M"))
 
 # Schedule tweets
 def schedule_tweets():
@@ -60,12 +65,16 @@ def schedule_tweets():
 # Post the tweet
 def post_tweet():
     try:
+        print("Twit atılıyor...")
         client.create_tweet(text=output)
     except Exception as e:
         print(f"Twit atılırken hata: {e}")
 
 # Main loop
+# post_tweet() # debug
 schedule_tweets()
 while True:
     schedule.run_pending()
     time.sleep(60)
+    
+
