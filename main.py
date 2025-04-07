@@ -162,7 +162,7 @@ def login(driver, attempts=5, delay=20):
             CHECKBOX_COORDS = (675, 720)
             pyautogui.click(*CHECKBOX_COORDS)
             wait_element(driver, LOGIN_BTN_XPATH, timeout=10).click()
-            
+
             return
         
         except TimeoutException:
@@ -233,6 +233,32 @@ def count_block_seats(driver):
     except Exception as error:
         print(f"Koltuklar sayılırken hata\n{error}")
         return 0, 0
+    
+def handle_category(driver, category_name):
+    total, occupied = 0, 0
+
+    # Category header
+    print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+    
+    # Select a block from the dropdown menu
+    wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
+    wait_options(driver, BLOCK_OPTIONS_XPATH)
+    block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+
+    for j in range(len(block_options)):
+        block_name = select_block(driver, block_options, j)
+        if not block_name:
+            continue
+
+        # Calculate seats
+        total, occupied = count_block_seats(driver)
+        total += total
+        occupied += occupied
+
+        # Change to the next block
+        wait_element(driver, CHANGE_SEAT_XPATH).click()
+
+    return total, occupied
 
 # Main function to count seats
 def count_seats(driver, AWAY):
@@ -253,26 +279,9 @@ def count_seats(driver, AWAY):
         category_name = select_category(driver, category_options, index, AWAY)
 
         if category_name:
-            # Category header
-            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
-            
-            # Select a block from the dropdown menu
-            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            wait_options(driver, BLOCK_OPTIONS_XPATH)
-            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
-
-            for j in range(len(block_options)):
-                block_name = select_block(driver, block_options, j)
-                if not block_name:
-                    continue
-
-                # Calculate seats
-                total, occupied = count_block_seats(driver)
-                total_count += total
-                total_occupied += occupied
-
-                # Click 'Change seat'
-                wait_element(driver, CHANGE_SEAT_XPATH).click()
+            total, output = handle_category(driver, category_name)
+            total_count += total
+            total_occupied += output
     else:
         for i in range(len(category_options)):
             category_name = select_category(driver, category_options, i, AWAY)
@@ -280,27 +289,9 @@ def count_seats(driver, AWAY):
             if not category_name:
                 continue
 
-            # Category header
-            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
-            
-            # Select a block from the dropdown menu
-            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            wait_options(driver, BLOCK_OPTIONS_XPATH)
-            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
-
-            # Loop through all blocks
-            for j in range(len(block_options)):
-                block_name = select_block(driver, block_options, j)
-                if not block_name:
-                    continue
-
-                # Calculate seats
-                total, occupied = count_block_seats(driver)
-                total_count += total
-                total_occupied += occupied
-
-                # Click 'Change seat'
-                wait_element(driver, CHANGE_SEAT_XPATH).click()
+            total, output = handle_category(driver, category_name)
+            total_count += total
+            total_occupied += output
 
             # Re-open category dropdown
             wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
