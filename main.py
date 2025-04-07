@@ -1,6 +1,3 @@
-# TODO: away olmama sorununu düzelt
-#       away olunca -1. indexten başlamama sorununu düzelt
-
 import os
 import time
 import pytz
@@ -29,7 +26,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
-# Seat info
+# URL
 TOTAL_SEATS = 0
 URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
 
@@ -55,6 +52,7 @@ MATCH_TIME_XPATH = "//span[@class='r-date']/div"
 MATCH_URL_XPATH = "//div[@class='wrapper row event-search-items']/div[1]/div/div/div[2]"
 NO_SEATS_POPUP_XPATH = "//button[contains(text(),'Tamam')]"
 COOKIE_MESSAGE_XPATH = "//a[@aria-label='dismiss cookie message']"
+NO_MATCH_XPATH = "//*[contains(text(),'mevcut bir etkinlik bulunmamaktadır')]"
 
 # Shorten github URL
 def shorten_url(long_url):
@@ -353,6 +351,13 @@ def main():
                 driver.maximize_window()
                 driver.open(URL)
 
+                try:
+                    no_match_text = wait_element(By.XPATH, NO_MATCH_XPATH)
+                    if no_match_text.is_displayed():
+                        return "Maç bulunamadı."
+                except:
+                    pass
+                
                 # Extract match details
                 match_details = extract_match_details(driver)
                 if not match_details: 
@@ -365,7 +370,7 @@ def main():
                 # Click on the match
                 wait_element(driver, MATCH_URL_XPATH)
                 driver.click(MATCH_URL_XPATH)
-                
+                    
                 # Click on the buy button
                 driver.sleep(2)
                 driver.execute_script("window.scrollBy(0,550)")
