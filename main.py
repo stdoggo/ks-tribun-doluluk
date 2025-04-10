@@ -226,8 +226,8 @@ def count_block_seats(driver):
         safe_click(driver, NO_SEATS_POPUP_XPATH)
         
         # print("Koltuklar sayılıyor...")
-        total = wait_element(driver, ALL_SEATS_XPATH)
-        occupied = wait_element(driver, OCCUPIED_SEAT_XPATH)
+        total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
+        occupied = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
 
         return len(total), len(occupied)
     except Exception as error:
@@ -254,6 +254,8 @@ def handle_category(driver, category_name):
         total, occupied = count_block_seats(driver)
         total += total
         occupied += occupied
+        
+        
 
         # Change to the next block
         wait_element(driver, CHANGE_SEAT_XPATH).click()
@@ -279,9 +281,31 @@ def count_seats(driver, AWAY):
         category_name = select_category(driver, category_options, index, AWAY)
 
         if category_name:
-            total, output = handle_category(driver, category_name)
-            total_count += total
-            total_occupied += output
+            # Category header
+            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+            
+            # Select a block from the dropdown menu
+            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
+            wait_options(driver, BLOCK_OPTIONS_XPATH)
+            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+
+            for j in range(len(block_options)):
+                block_name = select_block(driver, block_options, j)
+                if not block_name:
+                    continue
+
+                # Calculate seats
+                total, occupied = count_block_seats(driver)
+                total_count += total
+                total_occupied += occupied
+                
+                block_occupancy = (occupied / total) * 100
+                bar_length = int(block_occupancy / 6.25)
+                occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+                print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
+
+                # Click 'Change seat'
+                wait_element(driver, CHANGE_SEAT_XPATH).click()
     else:
         for i in range(len(category_options)):
             category_name = select_category(driver, category_options, i, AWAY)
@@ -289,9 +313,32 @@ def count_seats(driver, AWAY):
             if not category_name:
                 continue
 
-            total, output = handle_category(driver, category_name)
-            total_count += total
-            total_occupied += output
+            # Category header
+            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+            
+            # Select a block from the dropdown menu
+            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
+            wait_options(driver, BLOCK_OPTIONS_XPATH)
+            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+
+            # Loop through all blocks
+            for j in range(len(block_options)):
+                block_name = select_block(driver, block_options, j)
+                if not block_name:
+                    continue
+
+                # Calculate seats
+                total, occupied = count_block_seats(driver)
+                total_count += total
+                total_occupied += occupied
+                
+                block_occupancy = (occupied / total) * 100
+                bar_length = int(block_occupancy / 6.25)
+                occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+                print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
+
+                # Click 'Change seat'
+                wait_element(driver, CHANGE_SEAT_XPATH).click()
 
             # Re-open category dropdown
             wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
@@ -319,16 +366,16 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
             TOTAL_SEATS = 31827
     
     # Subtract a fixed number from total count since full blocks are not available on the website
-    full_blocks = TOTAL_SEATS - total_count
-    total_occupied += full_blocks
+    #full_blocks = TOTAL_SEATS - total_count
+    #total_occupied += full_blocks
     
     # Calculate the occupancy rate and create an occupancy bar
-    occupancy_rate = (total_occupied / TOTAL_SEATS) * 100
+    occupancy_rate = (total_occupied / total_count) * 100
     bar_length = int(occupancy_rate / 6.25)
     occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
     # Final output
-    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {TOTAL_SEATS:,}"
+    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {total_count:,}"
     
     return output, occupancy_rate, total_available
 
