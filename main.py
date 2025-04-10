@@ -282,7 +282,8 @@ def count_seats(driver, AWAY):
 
         if category_name:
             # Category header
-            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
+            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
             
             # Select a block from the dropdown menu
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()

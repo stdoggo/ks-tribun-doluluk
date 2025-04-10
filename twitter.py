@@ -26,7 +26,7 @@ api = tweepy.API(auth)
 # Get output and match date from the main script
 result = main()
 if result:
-    output, match_date = result
+    output, match_date, AWAY = result
     print(output)
 else:
     print("No data returned from main()")
@@ -41,22 +41,33 @@ def schedule_tweets():
     current_date = datetime.now(timezone)
     remaining_days = (match_date - current_date).days
 
-    if remaining_days >= 4:
-        # 4 or more days left
-        tweet_hours = ["11:50", "19:50"]
-        
-    elif 0 <= remaining_days < 4:
-        # 0-4 days left
-        tweet_hours = ["11:50", "15:50", "19:50"]
-        
-    elif remaining_days == 0:
-        # Match day
-        match_hour = match_date.strftime("%H:%M")
-        tweet_hours = [h for h in ["09:50", "11:50", "13:50", "15:50", "17:50"] if h < match_hour]
-        tweet_hours.append((match_date - timedelta(minutes=10)).strftime("%H:%M"))
-        
+    if AWAY:
+        # Away match
+        tweet_hours = ["12:00", "20:00"]
+        if remaining_days == 0:
+            tweet_hours = [h for h in tweet_hours if h < match_hour]
+            tweet_hours.append((match_date - timedelta(minutes=10)).strftime("%H:%M"))
     else:
-        # After the match
+        # Home match
+        if remaining_days >= 4:
+            # 4 or more days left
+            tweet_hours = ["12:00", "20:00"]
+            
+        elif 0 <= remaining_days < 4:
+            # 0-4 days left
+            tweet_hours = ["12:00", "16:00", "20:00"]
+            
+        elif remaining_days == 0:
+            # Match day
+            match_hour = match_date.strftime("%H:%M")
+            tweet_hours = [h for h in ["10:00", "12:00", "14:00", "16:00", "18:00"] if h < match_hour]
+            tweet_hours.append((match_date - timedelta(minutes=5)).strftime("%H:%M"))
+        else:
+            # After the match
+            tweet_hours = ["12:00"]
+    
+    if not result:
+        # No match found
         tweet_hours = ["12:00"]
 
     for time in tweet_hours:
