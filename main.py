@@ -233,34 +233,6 @@ def count_block_seats(driver):
     except Exception as error:
         print(f"Koltuklar sayılırken hata\n{error}")
         return 0, 0
-    
-def handle_category(driver, category_name):
-    total, occupied = 0, 0
-
-    # Category header
-    print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
-    
-    # Select a block from the dropdown menu
-    wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-    wait_options(driver, BLOCK_OPTIONS_XPATH)
-    block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
-
-    for j in range(len(block_options)):
-        block_name = select_block(driver, block_options, j)
-        if not block_name:
-            continue
-
-        # Calculate seats
-        total, occupied = count_block_seats(driver)
-        total += total
-        occupied += occupied
-        
-        
-
-        # Change to the next block
-        wait_element(driver, CHANGE_SEAT_XPATH).click()
-
-    return total, occupied
 
 # Main function to count seats
 def count_seats(driver, AWAY):
@@ -315,7 +287,8 @@ def count_seats(driver, AWAY):
                 continue
 
             # Category header
-            print(f"\n{'=' * 42}\n====== {category_name} ======\n{'=' * 42}")
+            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
+            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
             
             # Select a block from the dropdown menu
             wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
