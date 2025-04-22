@@ -176,10 +176,9 @@ def login(driver, attempts=5, delay=20):
             CHECKBOX_COORDS = (675, 720)
             pyautogui.click(*CHECKBOX_COORDS)
             wait_element(driver, LOGIN_BTN_XPATH, timeout=10).click()
-
             return
         
-        except TimeoutException:
+        except:
             # print("Giriş başarısız, tekrar deneniyor...")
             time.sleep(delay)
             driver.refresh()
@@ -200,7 +199,7 @@ def select_category(driver, category_options, index, AWAY):
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
-            if category_option.get_attribute("class") == "dropdown-option disabled" or "Misafir" in category_name:
+            if category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name:
                 # print(f"Kategori {category_name} ({index + 1}/{len(category_options)}) dolu")
                 return None
             
@@ -234,18 +233,30 @@ def select_block(driver, block_options, index):
 # Count seats in the selected block
 def count_block_seats(driver):
     try:
+        # Click on the seat map button
         wait_element(driver, SEAT_MAP_XPATH).click()
 
-        # Close popup if it appears
+        # Handle the popup if it appears
         safe_click(driver, NO_SEATS_POPUP_XPATH)
-        
-        # print("Koltuklar sayılıyor...")
+        try:
+            popup = wait_element(driver, NO_SEATS_POPUP_XPATH, timeout=5)
+            if popup.is_displayed():
+                # print("Pencere kapatılıyor...")
+                popup.click()
+                driver.execute_script("arguments[0].scrollIntoView(true);", wait_element(driver, SEAT_MAP_XPATH))
+                wait_element(driver, SEAT_MAP_XPATH).click()
+        except:
+            # print("Popup görünmedi, koltuklar sayılıyor...")
+            pass
+
+        # Count total and occupied seats
         total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
         occupied = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
 
         return len(total), len(occupied)
+
     except Exception as error:
-        print(f"Koltuklar sayılırken hata\n{error}")
+        print(f"Koltuklar sayılırken hata: {error}")
         return 0, 0
 
 # Main function to count seats
@@ -283,8 +294,6 @@ def count_seats(driver, AWAY):
 
                 # Calculate seats
                 total, occupied = count_block_seats(driver)
-                if total == 0:
-                    continue
                 total_count += total
                 total_occupied += occupied
                 
@@ -319,8 +328,6 @@ def count_seats(driver, AWAY):
 
                 # Calculate seats
                 total, occupied = count_block_seats(driver)
-                if total == 0:
-                    continue
                 total_count += total
                 total_occupied += occupied
                 
@@ -375,13 +382,17 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
 def main():
     # Redirect all printed output to a text file
     with open("output.txt", "w", encoding="utf-8") as file:
-        
         with redirect_stdout(file):
-            with SB(uc=True) as driver:
+            with SB(uc=True, incognito=True) as driver:
                 # Open the browser
                 driver.maximize_window()
                 driver.open(URL)
-
+                try:
+                    wait_element(driver, MATCH_TITLE_XPATH, timeout=30)
+                except:
+                    time.sleep(5)
+                    driver.refresh()
+                    wait_element(driver, MATCH_TITLE_XPATH, timeout=30)
                 check_if_no_match(NO_MATCH_XPATH)
                 
                 # Extract match details
@@ -404,8 +415,13 @@ def main():
                 check_if_no_match(PRIORITY_XPATH)
                 
                 # Sign in passo.com.tr
-                login(driver)
-                
+                try:
+                    login(driver)
+                except:
+                    time.sleep(5)
+                    driver.refresh()
+                    login(driver)
+                    
                 # Calculate the occupancy rate
                 driver.execute_script("document.body.style.zoom='80%'")
                 output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY)
