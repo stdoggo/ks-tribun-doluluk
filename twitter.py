@@ -5,7 +5,6 @@ import tweepy
 import schedule
 from dotenv import load_dotenv
 from main import main
-from main import extract_match_details
 from datetime import datetime, timedelta
 
 # Load .env
@@ -26,7 +25,11 @@ api = tweepy.API(auth)
 # Get output and match date from the main script
 result = main()
 if result:
-    output, match_date, AWAY = result
+    if len(result) == 2:
+        output, match_date = result
+        AWAY = None
+    else:
+        output, match_date, AWAY = result
     print(output)
 else:
     print("No data returned from main()")

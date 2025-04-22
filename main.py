@@ -13,7 +13,6 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 
 # Login credentials
 load_dotenv(dotenv_path='keys.env')
@@ -49,10 +48,40 @@ CHANGE_SEAT_XPATH = "//button[contains(text(),'Seçimi değiştir')]"
 MATCH_TITLE_XPATH = "//div[@class='r-title']"
 MATCH_DATE_XPATH = "//span[@class='r-date']"
 MATCH_TIME_XPATH = "//span[@class='r-date']/div"
-MATCH_URL_XPATH = "//div[@class='wrapper row event-search-items']/div[1]/div/div/div[2]"
+MATCH_URL_XPATH = f"//div[contains(text(),'Kocaelispor')]"
 NO_SEATS_POPUP_XPATH = "//button[contains(text(),'Tamam')]"
 COOKIE_MESSAGE_XPATH = "//a[@aria-label='dismiss cookie message']"
 NO_MATCH_XPATH = "//*[contains(text(),'mevcut bir etkinlik bulunmamaktadır')]"
+PRIORITY_XPATH = "//div[@class='r-title' and contains(text(),'Kongre')]"
+    
+# Wait for the element to load
+def wait_element(driver, xpath, timeout=60):
+    return WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
+
+# Wait for dropdown menu options to load
+def wait_options(driver, xpath, timeout=60):
+    return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
+
+def wait_scroll(driver, xpath, timeout=60):
+    element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
+    driver.execute_script("arguments[0].scrollIntoView(true);", element)
+    return element
+
+# Click element with the try-except block
+def safe_click(driver, xpath):
+    try:
+        wait_element(driver, xpath).click()
+    except Exception:
+        pass
+
+# Check if there is no match available
+def check_if_no_match(xpath):
+    try:
+        xpath = wait_element(By.XPATH, xpath)
+        if xpath.is_displayed():
+            return "Maç bulunamadı."
+    except:
+        pass
 
 # Shorten github URL
 def shorten_url(long_url):
@@ -102,21 +131,6 @@ def upload_to_gist():
     except RequestException as error:
         print(f"Hata: {error}")
         return None
-    
-# Wait for the element to load
-def wait_element(driver, xpath, timeout=60):
-    return WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
-
-# Wait for dropdown menu options to load
-def wait_options(driver, xpath, timeout=60):
-    return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
-
-# Click element with the try-except block
-def safe_click(driver, xpath):
-    try:
-        wait_element(driver, xpath).click()
-    except Exception:
-        pass
 
 # Extract opponent name
 def extract_clubs(filename="club_list.txt"):
@@ -186,7 +200,7 @@ def select_category(driver, category_options, index, AWAY):
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
-            if category_option.get_attribute("class") == "dropdown-option disabled":
+            if category_option.get_attribute("class") == "dropdown-option disabled" or "Misafir" in category_name:
                 # print(f"Kategori {category_name} ({index + 1}/{len(category_options)}) dolu")
                 return None
             
@@ -269,6 +283,8 @@ def count_seats(driver, AWAY):
 
                 # Calculate seats
                 total, occupied = count_block_seats(driver)
+                if total == 0:
+                    continue
                 total_count += total
                 total_occupied += occupied
                 
@@ -303,6 +319,8 @@ def count_seats(driver, AWAY):
 
                 # Calculate seats
                 total, occupied = count_block_seats(driver)
+                if total == 0:
+                    continue
                 total_count += total
                 total_occupied += occupied
                 
@@ -315,7 +333,8 @@ def count_seats(driver, AWAY):
                 wait_element(driver, CHANGE_SEAT_XPATH).click()
 
             # Re-open category dropdown
-            wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
+            category_dropdown = wait_scroll(driver, CATEGORY_DROPDOWN_XPATH)
+            driver.execute_script("arguments[0].click();", category_dropdown)
             wait_options(driver, CATEGORY_OPTIONS_XPATH)
             category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
 
@@ -330,26 +349,26 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
     
     # Determine the total seat number
     if AWAY:
-        TOTAL_SEATS = 600
+        TOTAL_SEATS = 200
     else:
-        if len(category_options) == 8:
+        if len(category_options) >= 8:
             TOTAL_SEATS = 31827 
-        elif len(category_options) == 6:
+        elif len(category_options) <= 7:
             TOTAL_SEATS = 23770
         else:
             TOTAL_SEATS = 31827
     
     # Subtract a fixed number from total count since full blocks are not available on the website
-    #full_blocks = TOTAL_SEATS - total_count
-    #total_occupied += full_blocks
+    full_blocks = TOTAL_SEATS - total_count
+    total_occupied += full_blocks
     
     # Calculate the occupancy rate and create an occupancy bar
-    occupancy_rate = (total_occupied / total_count) * 100
+    occupancy_rate = (total_occupied / TOTAL_SEATS) * 100
     bar_length = int(occupancy_rate / 6.25)
     occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
     # Final output
-    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {total_count:,}"
+    output = f"{match_title}\n{occupancy_bar} %{occupancy_rate:.2f}\n{ticket}: {total_occupied:,} / {TOTAL_SEATS:,}"
     
     return output, occupancy_rate, total_available
 
@@ -363,12 +382,7 @@ def main():
                 driver.maximize_window()
                 driver.open(URL)
 
-                try:
-                    no_match_text = wait_element(By.XPATH, NO_MATCH_XPATH)
-                    if no_match_text.is_displayed():
-                        return "Maç bulunamadı."
-                except:
-                    pass
+                check_if_no_match(NO_MATCH_XPATH)
                 
                 # Extract match details
                 match_details = extract_match_details(driver)
@@ -385,8 +399,9 @@ def main():
                     
                 # Click on the buy button
                 driver.sleep(2)
-                driver.execute_script("window.scrollBy(0,550)")
+                wait_scroll(driver, BUY_BTN_XPATH)
                 wait_element(driver, BUY_BTN_XPATH).click()
+                check_if_no_match(PRIORITY_XPATH)
                 
                 # Sign in passo.com.tr
                 login(driver)
