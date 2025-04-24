@@ -26,33 +26,34 @@ timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
 # URL
-TOTAL_SEATS = 0
 URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
 
 # XPaths
-BUY_BTN_XPATH = "//button[text()= 'SATIN AL']"
-LOGIN_BTN_XPATH = "//button[@class='black-btn']"
-EMAIL_INPUT_XPATH = "//input[@placeholder='E-Posta Adresi']"
-PASSWORD_INPUT_XPATH = "//input[@placeholder='Şifre']"
-CATEGORY_DROPDOWN_XPATH = "//div[@id='blocks']"
-CATEGORY_OPTIONS_XPATH = "//div[@class='dropdown-options']/div"
-DISABLED_OPTION_XPATH = "//div[@class='dropdown-options']/div[@class='dropdown-option disabled']"
-BLOCK_DROPDOWN_XPATH = "//select[@id='blocks']"
-BLOCK_OPTIONS_XPATH = "//select[@id='blocks']/option"
-NULL_OPTION_XPATH = "//select[@id='blocks']/option[contains(text(),'Blok Seçiniz')]"
-SEAT_MAP_XPATH = "//button[@id='custom_seat_button']"
-ALL_SEATS_XPATH = "//*[@class='seats']/*[@class='seat']"
-OCCUPIED_SEAT_XPATH = "//*[@class='seats']/*[@class='seat']/*[@fill='#7691a7']"
-AVAILABLE_SEAT_XPATH = "//*[@fill='#ffffff']"
-CHANGE_SEAT_XPATH = "//button[contains(text(),'Seçimi değiştir')]"
-MATCH_TITLE_XPATH = "//div[@class='r-title']"
-MATCH_DATE_XPATH = "//span[@class='r-date']"
-MATCH_TIME_XPATH = "//span[@class='r-date']/div"
-MATCH_URL_XPATH = f"//div[contains(text(),'Kocaelispor')]"
-NO_SEATS_POPUP_XPATH = "//button[contains(text(),'Tamam')]"
-COOKIE_MESSAGE_XPATH = "//a[@aria-label='dismiss cookie message']"
-NO_MATCH_XPATH = "//*[contains(text(),'mevcut bir etkinlik bulunmamaktadır')]"
-PRIORITY_XPATH = "//div[@class='r-title' and contains(text(),'Kongre')]"
+XPATHS = {
+    "BUY_BUTTON": "//button[text()= 'SATIN AL']",
+    "LOGIN_BUTTON": "//button[@class='black-btn']",
+    "EMAIL_INPUT": "//input[@placeholder='E-Posta Adresi']",
+    "PASSWORD_INPUT": "//input[@placeholder='Şifre']",
+    "CATEGORY_DROPDOWN": "//div[@id='blocks']",
+    "CATEGORY_OPTIONS": "//div[@class='dropdown-options']/div",
+    "DISABLED_OPTION": "//div[@class='dropdown-options']/div[@class='dropdown-option disabled']",
+    "BLOCK_DROPDOWN": "//select[@id='blocks']",
+    "BLOCK_OPTIONS": "//select[@id='blocks']/option",
+    "NULL_OPTION": "//select[@id='blocks']/option[contains(text(),'Blok Seçiniz')]",
+    "SEAT_MAP": "//button[@id='custom_seat_button']",
+    "ALL_SEATS": "//*[@class='seats']/*[@class='seat']",
+    "OCCUPIED_SEATS": "//*[@class='seats']/*[@class='seat']/*[@fill='#7691a7']",
+    "AVAILABLE_SEATS": "//*[@fill='#ffffff']",
+    "CHANGE_SEAT": "//button[contains(text(),'Seçimi değiştir')]",
+    "MATCH_TITLE": "//div[@class='r-title']",
+    "MATCH_DATE": "//span[@class='r-date']",
+    "MATCH_TIME": "//span[@class='r-date']/div",
+    "MATCH_URL": f"//div[contains(text(),'Kocaelispor')]",
+    "NO_SEATS_POPUP": "//button[contains(text(),'Tamam')]",
+    "COOKIE_MESSAGE": "//a[@aria-label='dismiss cookie message']",
+    "NO_MATCH": "//*[contains(text(),'mevcut bir etkinlik bulunmamaktadır')]",
+    "PRIORITY": "//div[@class='r-title' and contains(text(),'Kongre')]"
+}
     
 # Wait for the element to load
 def wait_element(driver, xpath, timeout=60):
@@ -144,7 +145,7 @@ def extract_match_details(driver):
     try:
         # Find match and extract the opponent details
         clubs = extract_clubs()
-        match_text = wait_element(driver, MATCH_TITLE_XPATH).text
+        match_text = wait_element(driver, XPATHS["MATCH_TITLE"]).text
         opponent = next((club for club in clubs if club in match_text), "Takım bulunamadı")
         if "Spor" in opponent:
             opponent = opponent.replace("Spor", "spor").replace(" ", "")
@@ -154,7 +155,7 @@ def extract_match_details(driver):
 
         # Extract match details
         locale.setlocale(locale.LC_TIME, "tr_TR.UTF-8")
-        match_date_str = wait_element(driver, MATCH_DATE_XPATH).text.replace("\n", " ")
+        match_date_str = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
         match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
 
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
@@ -169,13 +170,13 @@ def login(driver, attempts=5, delay=20):
     for i in range(attempts):
         try:
             driver.sleep(2)
-            wait_element(driver, EMAIL_INPUT_XPATH, timeout=10).send_keys(EMAIL)
-            wait_element(driver, PASSWORD_INPUT_XPATH, timeout=10).send_keys(PASSWORD)
+            wait_element(driver, XPATHS["EMAIL_INPUT"], timeout=10).send_keys(EMAIL)
+            wait_element(driver, XPATHS["PASSWORD_INPUT"], timeout=10).send_keys(PASSWORD)
             
             driver.sleep(2)
             CHECKBOX_COORDS = (675, 720)
             pyautogui.click(*CHECKBOX_COORDS)
-            wait_element(driver, LOGIN_BTN_XPATH, timeout=10).click()
+            wait_element(driver, XPATHS["LOGIN_BUTTON"], timeout=10).click()
             return
         
         except:
@@ -193,8 +194,8 @@ def select_category(driver, category_options, index, AWAY):
     max_retries = 3
     while retry_count < max_retries:
         try:
-            wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
-            category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
+            wait_element(driver, XPATHS["CATEGORY_DROPDOWN"]).click()
+            category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
             category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
@@ -216,11 +217,11 @@ def select_category(driver, category_options, index, AWAY):
 # Selects a block from the dropdown menu
 def select_block(driver, block_options, index):
     try:
-        wait_options(driver, BLOCK_OPTIONS_XPATH)
-        block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+        wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+        block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
 
         block_option = block_options[index]
-        if block_option == wait_element(driver, NULL_OPTION_XPATH):
+        if block_option == wait_element(driver, XPATHS["NULL_OPTION"]):
             return None
         driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
         block_option.click()
@@ -234,24 +235,24 @@ def select_block(driver, block_options, index):
 def count_block_seats(driver):
     try:
         # Click on the seat map button
-        wait_element(driver, SEAT_MAP_XPATH).click()
+        wait_element(driver, XPATHS["SEAT_MAP"]).click()
 
         # Handle the popup if it appears
-        safe_click(driver, NO_SEATS_POPUP_XPATH)
+        safe_click(driver, XPATHS["NO_SEATS_POPUP"])
         try:
-            popup = wait_element(driver, NO_SEATS_POPUP_XPATH, timeout=5)
+            popup = wait_element(driver, XPATHS["NO_SEATS_POPUP"], timeout=5)
             if popup.is_displayed():
                 # print("Pencere kapatılıyor...")
                 popup.click()
-                driver.execute_script("arguments[0].scrollIntoView(true);", wait_element(driver, SEAT_MAP_XPATH))
-                wait_element(driver, SEAT_MAP_XPATH).click()
+                driver.execute_script("arguments[0].scrollIntoView(true);", wait_element(driver, XPATHS["SEAT_MAP"]))
+                wait_element(driver, XPATHS["SEAT_MAP"]).click()
         except:
             # print("Popup görünmedi, koltuklar sayılıyor...")
             pass
 
         # Count total and occupied seats
-        total = driver.find_elements(By.XPATH, ALL_SEATS_XPATH)
-        occupied = driver.find_elements(By.XPATH, OCCUPIED_SEAT_XPATH)
+        total = driver.find_elements(By.XPATH, XPATHS["ALL_SEATS"])
+        occupied = driver.find_elements(By.XPATH, XPATHS["OCCUPIED_SEATS"])
 
         return len(total), len(occupied)
 
@@ -264,13 +265,13 @@ def count_seats(driver, AWAY):
     total_occupied, total_count = 0, 0
 
     # Dismiss cookie message if it appears
-    safe_click(driver, COOKIE_MESSAGE_XPATH)
+    safe_click(driver, XPATHS["COOKIE_MESSAGE"])
 
     # Click the dropdown menu and wait for category options
-    wait_element(driver, CATEGORY_DROPDOWN_XPATH).click()
+    wait_element(driver, XPATHS["CATEGORY_DROPDOWN"]).click()
     driver.sleep(2)
-    wait_options(driver, CATEGORY_OPTIONS_XPATH)
-    category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
+    wait_options(driver, XPATHS["CATEGORY_OPTIONS"])
+    category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
 
     if AWAY:
         # Only select the last index for away matches
@@ -283,9 +284,9 @@ def count_seats(driver, AWAY):
             print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
             
             # Select a block from the dropdown menu
-            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            wait_options(driver, BLOCK_OPTIONS_XPATH)
-            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+            wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
+            wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+            block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
 
             for j in range(len(block_options)):
                 block_name = select_block(driver, block_options, j)
@@ -303,7 +304,7 @@ def count_seats(driver, AWAY):
                 print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
 
                 # Click 'Change seat'
-                wait_element(driver, CHANGE_SEAT_XPATH).click()
+                wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
     else:
         for i in range(len(category_options)):
             category_name = select_category(driver, category_options, i, AWAY)
@@ -316,9 +317,9 @@ def count_seats(driver, AWAY):
             print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
             
             # Select a block from the dropdown menu
-            wait_element(driver, BLOCK_DROPDOWN_XPATH).click()
-            wait_options(driver, BLOCK_OPTIONS_XPATH)
-            block_options = driver.find_elements(By.XPATH, BLOCK_OPTIONS_XPATH)
+            wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
+            wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+            block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
 
             # Loop through all blocks
             for j in range(len(block_options)):
@@ -337,13 +338,13 @@ def count_seats(driver, AWAY):
                 print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
 
                 # Click 'Change seat'
-                wait_element(driver, CHANGE_SEAT_XPATH).click()
+                wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
 
             # Re-open category dropdown
-            category_dropdown = wait_scroll(driver, CATEGORY_DROPDOWN_XPATH)
+            category_dropdown = wait_scroll(driver, XPATHS["CATEGORY_DROPDOWN"])
             driver.execute_script("arguments[0].click();", category_dropdown)
-            wait_options(driver, CATEGORY_OPTIONS_XPATH)
-            category_options = driver.find_elements(By.XPATH, CATEGORY_OPTIONS_XPATH)
+            wait_options(driver, XPATHS["CATEGORY_OPTIONS"])
+            category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
 
     return total_count, total_occupied, category_options
 
@@ -388,12 +389,12 @@ def main():
                 driver.maximize_window()
                 driver.open(URL)
                 try:
-                    wait_element(driver, MATCH_TITLE_XPATH, timeout=30)
+                    wait_element(driver, XPATHS["MATCH_TITLE"], timeout=30)
                 except:
                     time.sleep(5)
                     driver.refresh()
-                    wait_element(driver, MATCH_TITLE_XPATH, timeout=30)
-                check_if_no_match(NO_MATCH_XPATH)
+                    wait_element(driver, XPATHS["MATCH_TITLE"], timeout=30)
+                check_if_no_match(XPATHS["NO_MATCH"])
                 
                 # Extract match details
                 match_details = extract_match_details(driver)
@@ -405,14 +406,16 @@ def main():
                 print(f"\nMaç: {match_title}\nTarih: {match_date}")
         
                 # Click on the match
-                wait_element(driver, MATCH_URL_XPATH)
-                driver.click(MATCH_URL_XPATH)
+                wait_element(driver, XPATHS["MATCH_URL"])
+                driver.click(XPATHS["MATCH_URL"])
                     
                 # Click on the buy button
                 driver.sleep(2)
-                wait_scroll(driver, BUY_BTN_XPATH)
-                wait_element(driver, BUY_BTN_XPATH).click()
-                check_if_no_match(PRIORITY_XPATH)
+                wait_scroll(driver, XPATHS["BUY_BUTTON"])
+                buy_button = wait_element(driver, XPATHS["BUY_BUTTON"])
+                driver.execute_script("arguments[0].scrollIntoView(true);", buy_button)
+                driver.execute_script("arguments[0].click();", buy_button)
+                check_if_no_match(XPATHS["PRIORITY"])
                 
                 # Sign in passo.com.tr
                 try:
