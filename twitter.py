@@ -32,7 +32,7 @@ if result:
         output, match_date, AWAY = result
     print(output)
 else:
-    print("No data returned from main()")
+    print("No data")
 
 # Convert match date to date format
 timezone = pytz.timezone("Europe/Istanbul")
