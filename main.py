@@ -1,4 +1,5 @@
 import os
+import csv
 import time
 import pytz
 import requests
@@ -134,19 +135,29 @@ def upload_to_gist():
         return None
 
 # Extract opponent name
-def extract_clubs(filename="club_list.txt"):
+def extract_clubs(filename="club_list.csv"):
     try:
+        clubs = []
+        capacities = []
         with open(filename, "r", encoding="utf-8") as file:
-            return [line.strip() for line in file.readlines()]
+            reader = csv.reader(file, delimiter=';')
+            for row in reader:
+                if len(row) >= 2:
+                    clubs.append(row[0].strip())
+                    capacities.append(row[1].strip())
+        return clubs, capacities
     except OSError as error:
         print(f"Dosya okunamadı\n{error}")
+        return [], []
 
 def extract_match_details(driver):
     try:
         # Find match and extract the opponent details
-        clubs = extract_clubs()
+        clubs, capacity = extract_clubs()
         match_text = wait_element(driver, XPATHS["MATCH_TITLE"]).text
         opponent = next((club for club in clubs if club in match_text), "Takım bulunamadı")
+        opponent_capacity = int(next((capacity[i].replace(".", "").replace(",", "") for i, club in enumerate(clubs) if club == opponent), "0"))
+        
         if "Spor" in opponent:
             opponent = opponent.replace("Spor", "spor").replace(" ", "")
 
@@ -161,7 +172,7 @@ def extract_match_details(driver):
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
         ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
 
-        return match_title, match_date, ticket, AWAY
+        return match_title, match_date, ticket, AWAY, opponent_capacity
     except Exception:
         return None
     
@@ -348,7 +359,7 @@ def count_seats(driver, AWAY):
 
     return total_count, total_occupied, category_options
 
-def calculate_occupancy(driver, match_title, ticket, AWAY):
+def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     global TOTAL_SEATS
     
     # Calculate all seats
@@ -357,7 +368,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
     
     # Determine the total seat number
     if AWAY:
-        TOTAL_SEATS = 154
+        TOTAL_SEATS = opponent_capacity
     else:
         if len(category_options) >= 8:
             TOTAL_SEATS = 31827 
@@ -401,7 +412,7 @@ def main():
                 if not match_details: 
                     return
                 
-                match_title, match_date, ticket, AWAY = match_details
+                match_title, match_date, ticket, AWAY, opponent_capacity = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
                 print(f"\nMaç: {match_title}\nTarih: {match_date}")
         
@@ -427,7 +438,7 @@ def main():
                     
                 # Calculate the occupancy rate
                 driver.execute_script("document.body.style.zoom='80%'")
-                output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY)
+                output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity)
     
     # Add more info
     if occupancy_rate == 100:
