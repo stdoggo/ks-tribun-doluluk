@@ -49,7 +49,7 @@ def schedule_tweets():
         tweet_hours = ["12:00", "20:00"]
         if remaining_days == 0:
             tweet_hours = [h for h in tweet_hours if h < match_hour]
-            tweet_hours.append((match_date - timedelta(minutes=10)).strftime("%H:%M"))
+            tweet_hours.append((match_date).strftime("%H:%M"))
     else:
         # Home match
         if remaining_days >= 4:
@@ -64,7 +64,7 @@ def schedule_tweets():
             # Match day
             match_hour = match_date.strftime("%H:%M")
             tweet_hours = [h for h in ["10:00", "12:00", "14:00", "16:00", "18:00"] if h < match_hour]
-            tweet_hours.append((match_date - timedelta(minutes=5)).strftime("%H:%M"))
+            tweet_hours.append((match_date).strftime("%H:%M"))
         else:
             # After the match
             tweet_hours = ["12:00"]

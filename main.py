@@ -357,7 +357,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY):
     
     # Determine the total seat number
     if AWAY:
-        TOTAL_SEATS = 200
+        TOTAL_SEATS = 154
     else:
         if len(category_options) >= 8:
             TOTAL_SEATS = 31827 
