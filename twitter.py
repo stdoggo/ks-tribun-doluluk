@@ -5,7 +5,7 @@ import tweepy
 import schedule
 from dotenv import load_dotenv
 from main import main
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Load .env
 load_dotenv(dotenv_path='keys.env')
