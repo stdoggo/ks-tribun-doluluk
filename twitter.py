@@ -81,11 +81,17 @@ def post_tweet():
     try:
         print("Twit atılıyor...")
         client.create_tweet(text=output)
+        # Print the next scheduled job
+        next_job = schedule.next_run()
+        if next_job:
+            print(f"Bir sonraki tweet saati: {next_job.strftime('%H:%M')}")
+        else:
+            print("Bir sonraki tweet saati planlanmadı.")
     except Exception as e:
         print(f"Twit atılırken hata: {e}")
 
 # Main loop
-post_tweet() # debug
+# post_tweet() # debug
 schedule_tweets()
 while True:
     schedule.run_pending()

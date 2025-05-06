@@ -27,7 +27,7 @@ timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
 # URL
-URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
+URL = "https://www.passo.com.tr/tr/ara?searchQuery=fsafdsafsafdasdasd&etkinlikdetayi=true"
 
 # XPaths
 XPATHS = {
@@ -52,8 +52,7 @@ XPATHS = {
     "MATCH_URL": f"//div[contains(text(),'Kocaelispor')]",
     "NO_SEATS_POPUP": "//button[contains(text(),'Tamam')]",
     "COOKIE_MESSAGE": "//a[@aria-label='dismiss cookie message']",
-    "NO_MATCH": "//*[contains(text(),'mevcut bir etkinlik bulunmamaktadır')]",
-    "PRIORITY": "//div[@class='r-title' and contains(text(),'Kongre')]"
+    "PRIORITY": "//div[contains(text(),'Kongre')]"
 }
     
 # Wait for the element to load
@@ -74,15 +73,6 @@ def safe_click(driver, xpath):
     try:
         wait_element(driver, xpath).click()
     except Exception:
-        pass
-
-# Check if there is no match available
-def check_if_no_match(xpath):
-    try:
-        xpath = wait_element(By.XPATH, xpath)
-        if xpath.is_displayed():
-            return "Maç bulunamadı."
-    except:
         pass
 
 # Shorten github URL
@@ -399,18 +389,25 @@ def main():
                 # Open the browser
                 driver.maximize_window()
                 driver.open(URL)
+                
                 try:
                     wait_element(driver, XPATHS["MATCH_TITLE"], timeout=30)
                 except:
                     time.sleep(5)
                     driver.refresh()
-                    wait_element(driver, XPATHS["MATCH_TITLE"], timeout=30)
-                check_if_no_match(XPATHS["NO_MATCH"])
+                    
+                # Check if there are any matches available
+                try:
+                    element = wait_element(driver, XPATHS["MATCH_TITLE"], timeout=10)
+                    if not element.is_displayed():
+                        return "Maç bulunamadı."
+                except:
+                    return "Maç bulunamadı."
                 
                 # Extract match details
                 match_details = extract_match_details(driver)
                 if not match_details: 
-                    return
+                    return "Maç bulunamadı."
                 
                 match_title, match_date, ticket, AWAY, opponent_capacity = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
@@ -426,7 +423,6 @@ def main():
                 buy_button = wait_element(driver, XPATHS["BUY_BUTTON"])
                 driver.execute_script("arguments[0].scrollIntoView(true);", buy_button)
                 driver.execute_script("arguments[0].click();", buy_button)
-                check_if_no_match(XPATHS["PRIORITY"])
                 
                 # Sign in passo.com.tr
                 try:
@@ -436,6 +432,11 @@ def main():
                     driver.refresh()
                     login(driver)
                     
+                # Check if the match is in priority sale
+                priority = wait_element(driver, XPATHS["PRIORITY"], timeout=10)
+                if priority.is_displayed():
+                    return "Biletler henüz genel satışa açılmadı."
+
                 # Calculate the occupancy rate
                 driver.execute_script("document.body.style.zoom='80%'")
                 output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity)
