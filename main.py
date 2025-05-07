@@ -10,10 +10,10 @@ from contextlib import redirect_stdout
 from dotenv import load_dotenv
 from datetime import datetime
 from seleniumbase import SB
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
+from functools import lru_cache
 
 # Login credentials
 load_dotenv(dotenv_path='keys.env')
@@ -27,7 +27,7 @@ timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
 # URL
-URL = "https://www.passo.com.tr/tr/ara?searchQuery=fsafdsafsafdasdasd&etkinlikdetayi=true"
+URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
 
 # XPaths
 XPATHS = {
@@ -77,10 +77,13 @@ def safe_click(driver, xpath):
 
 # Shorten github URL
 def shorten_url(long_url):
-    response = requests.get(f"http://tinyurl.com/api-create.php?url={long_url}")
-    if response.status_code == 200:
-        return response.text
-    return None
+    try:
+        response = requests.get(f"http://tinyurl.com/api-create.php?url={long_url}", timeout=10)
+        if response.status_code == 200:
+            return response.text
+        return None
+    except RequestException:
+        return None
 
 # Upload output.txt to Github
 def upload_to_gist():
@@ -88,43 +91,40 @@ def upload_to_gist():
     description = f"Blok doluluk durumu ({current_date})"
     public = True
 
-    with open(filename, "r", encoding="utf-8") as f:
-        content = f.read()
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            content = f.read()
 
-    payload = {
-        "description": description,
-        "public": public,
-        "files": {
-            filename: {
-                "content": content
+        payload = {
+            "description": description,
+            "public": public,
+            "files": {
+                filename: {
+                    "content": content
+                }
             }
         }
-    }
 
-    try:
         response = requests.post(
             "https://api.github.com/gists",
             json=payload,
             headers={
                 "Authorization": f"token {GITHUB_TOKEN}",
                 "Accept": "application/vnd.github+json"
-            }
+            },
+            timeout=15
         )
 
         if response.status_code == 201:
             gist_data = response.json()
             raw_url = list(gist_data["files"].values())[0]["raw_url"]
-            short_url = shorten_url(raw_url)
-            return short_url
-        else:
-            print(f"Hata kodu: {response.status_code}")
-            print(f"{response.text}")
-            return None
-    except RequestException as error:
-        print(f"Hata: {error}")
+            return shorten_url(raw_url)
+        return None
+    except (RequestException, OSError):
         return None
 
 # Extract opponent name
+@lru_cache(maxsize=1)
 def extract_clubs(filename="club_list.csv"):
     try:
         clubs = []
@@ -261,6 +261,45 @@ def count_block_seats(driver):
         print(f"Koltuklar sayılırken hata: {error}")
         return 0, 0
 
+# Process block statistics
+def process_block(driver, block_name, total_count, total_occupied):
+    # Calculate seats
+    total, occupied = count_block_seats(driver)
+    total_count += total
+    total_occupied += occupied
+    
+    if total > 0:  # Avoid division by zero
+        block_occupancy = (occupied / total) * 100
+        bar_length = int(block_occupancy / 6.25)
+        occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+        print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
+
+    # Click 'Change seat'
+    wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
+    
+    return total_count, total_occupied
+
+# Process category and its blocks
+def process_category(driver, category_name, total_count, total_occupied):
+    # Category header
+    category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
+    print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
+    
+    # Select a block from the dropdown menu
+    wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
+    wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+    block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
+
+    # Loop through all blocks
+    for j in range(len(block_options)):
+        block_name = select_block(driver, block_options, j)
+        if not block_name:
+            continue
+
+        total_count, total_occupied = process_block(driver, block_name, total_count, total_occupied)
+    
+    return total_count, total_occupied
+
 # Main function to count seats
 def count_seats(driver, AWAY):
     total_occupied, total_count = 0, 0
@@ -280,32 +319,7 @@ def count_seats(driver, AWAY):
         category_name = select_category(driver, category_options, index, AWAY)
 
         if category_name:
-            # Category header
-            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
-            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
-            
-            # Select a block from the dropdown menu
-            wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
-            wait_options(driver, XPATHS["BLOCK_OPTIONS"])
-            block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
-
-            for j in range(len(block_options)):
-                block_name = select_block(driver, block_options, j)
-                if not block_name:
-                    continue
-
-                # Calculate seats
-                total, occupied = count_block_seats(driver)
-                total_count += total
-                total_occupied += occupied
-                
-                block_occupancy = (occupied / total) * 100
-                bar_length = int(block_occupancy / 6.25)
-                occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
-                print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
-
-                # Click 'Change seat'
-                wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
+            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
     else:
         for i in range(len(category_options)):
             category_name = select_category(driver, category_options, i, AWAY)
@@ -313,33 +327,7 @@ def count_seats(driver, AWAY):
             if not category_name:
                 continue
 
-            # Category header
-            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
-            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
-            
-            # Select a block from the dropdown menu
-            wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
-            wait_options(driver, XPATHS["BLOCK_OPTIONS"])
-            block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
-
-            # Loop through all blocks
-            for j in range(len(block_options)):
-                block_name = select_block(driver, block_options, j)
-                if not block_name:
-                    continue
-
-                # Calculate seats
-                total, occupied = count_block_seats(driver)
-                total_count += total
-                total_occupied += occupied
-                
-                block_occupancy = (occupied / total) * 100
-                bar_length = int(block_occupancy / 6.25)
-                occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
-                print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
-
-                # Click 'Change seat'
-                wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
+            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
 
             # Re-open category dropdown
             category_dropdown = wait_scroll(driver, XPATHS["CATEGORY_DROPDOWN"])
@@ -350,8 +338,6 @@ def count_seats(driver, AWAY):
     return total_count, total_occupied, category_options
 
 def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
-    global TOTAL_SEATS
-    
     # Calculate all seats
     total_count, total_occupied, category_options = count_seats(driver, AWAY)
     total_available = total_count - total_occupied
@@ -372,7 +358,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     total_occupied += full_blocks
     
     # Calculate the occupancy rate and create an occupancy bar
-    occupancy_rate = (total_occupied / TOTAL_SEATS) * 100
+    occupancy_rate = (total_occupied / TOTAL_SEATS) * 100 if TOTAL_SEATS > 0 else 0
     bar_length = int(occupancy_rate / 6.25)
     occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
@@ -431,11 +417,9 @@ def main():
                     time.sleep(5)
                     driver.refresh()
                     login(driver)
-                    
-                # Check if the match is in priority sale
-                priority = wait_element(driver, XPATHS["PRIORITY"], timeout=10)
-                if priority.is_displayed():
-                    return "Biletler henüz genel satışa açılmadı."
+                #priority = wait_element(driver, XPATHS["PRIORITY"], timeout=10)
+                #if priority.is_displayed():
+                #    return "Biletler henüz genel satışa açılmadı."
 
                 # Calculate the occupancy rate
                 driver.execute_script("document.body.style.zoom='80%'")
@@ -454,3 +438,4 @@ def main():
 
 if __name__ == "__main__":
     print(main())
+    # main()
