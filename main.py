@@ -46,7 +46,7 @@ XPATHS = {
     "OCCUPIED_SEATS": "//*[@class='seats']/*[@class='seat']/*[@fill='#7691a7']",
     "AVAILABLE_SEATS": "//*[@fill='#ffffff']",
     "CHANGE_SEAT": "//button[contains(text(),'Seçimi değiştir')]",
-    "MATCH_TITLE": "//div[@class='r-title']",
+    "MATCH_TITLE": "//div[@class='r-title' and contains(text(), 'Kocaelispor')]",
     "MATCH_DATE": "//span[@class='r-date']",
     "MATCH_TIME": "//span[@class='r-date']/div",
     "MATCH_URL": f"//div[contains(text(),'Kocaelispor')]",
@@ -248,7 +248,6 @@ def count_block_seats(driver):
                 driver.execute_script("arguments[0].scrollIntoView(true);", wait_element(driver, XPATHS["SEAT_MAP"]))
                 wait_element(driver, XPATHS["SEAT_MAP"]).click()
         except:
-            # print("Popup görünmedi, koltuklar sayılıyor...")
             pass
 
         # Count total and occupied seats
@@ -268,7 +267,7 @@ def process_block(driver, block_name, total_count, total_occupied):
     total_count += total
     total_occupied += occupied
     
-    if total > 0:  # Avoid division by zero
+    if total > 0:
         block_occupancy = (occupied / total) * 100
         bar_length = int(block_occupancy / 6.25)
         occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
@@ -417,9 +416,11 @@ def main():
                     time.sleep(5)
                     driver.refresh()
                     login(driver)
-                #priority = wait_element(driver, XPATHS["PRIORITY"], timeout=10)
-                #if priority.is_displayed():
-                #    return "Biletler henüz genel satışa açılmadı."
+                    
+                #if wait_element(driver, XPATHS["PRIORITY"], timeout=10).is_displayed():
+                #    return "Biletler henüz genel satışa açılmadı."     
+                #else:
+                #    pass 
 
                 # Calculate the occupancy rate
                 driver.execute_script("document.body.style.zoom='80%'")
