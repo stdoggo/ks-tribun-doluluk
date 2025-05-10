@@ -199,7 +199,6 @@ def select_category(driver, category_options, index, AWAY):
             # Skip if the category is occupied
             is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name
             if is_occupied:
-                print("\nKATEGORİ DOLU")
                 return None
             
             driver.execute_script("arguments[0].scrollIntoView(true);", category_option)
