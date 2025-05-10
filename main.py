@@ -2,18 +2,18 @@ import os
 import csv
 import time
 import pytz
+import locale
 import requests
 import pyautogui
-import locale
-from requests.exceptions import RequestException
-from contextlib import redirect_stdout
-from dotenv import load_dotenv
 from datetime import datetime
-from seleniumbase import SB
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
+from dotenv import load_dotenv
 from functools import lru_cache
+from contextlib import redirect_stdout
+from seleniumbase import SB
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from requests.exceptions import RequestException
 
 # Login credentials
 load_dotenv(dotenv_path='keys.env')
