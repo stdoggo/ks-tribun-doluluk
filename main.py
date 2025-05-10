@@ -186,8 +186,6 @@ def login(driver, attempts=5, delay=20):
         
 # Selects a category from the dropdown menu
 def select_category(driver, category_options, index, AWAY):
-
-    AWAY = extract_match_details(driver)
     
     retry_count = 0
     max_retries = 3
@@ -198,10 +196,12 @@ def select_category(driver, category_options, index, AWAY):
             category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
+            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
+            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
+            
             # Skip if the category is occupied
-            if category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name:
-                category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
-                print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
+            is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name
+            if is_occupied:
                 print("\nKATEGORİ DOLU")
                 return None
             
