@@ -55,23 +55,21 @@ XPATHS = {
     "PRIORITY": "//div[contains(text(),'Kongre')]"
 }
     
-# Wait for the element to load
 def wait_element(driver, xpath, timeout=60):
-    return WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.XPATH, xpath)))
-
-# Wait for dropdown menu options to load
-def wait_options(driver, xpath, timeout=60):
-    return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
-
-def wait_scroll(driver, xpath, timeout=60):
     element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
-    driver.execute_script("arguments[0].scrollIntoView(true);", element)
+    return element
+
+def click_element(driver, xpath, timeout=60):
+    element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath)))
+    if not element.is_displayed():
+        driver.execute_script("arguments[0].scrollIntoView(true);", element)
+    driver.execute_script("arguments[0].click();", element)
     return element
 
 # Click element with the try-except block
 def safe_click(driver, xpath):
     try:
-        wait_element(driver, xpath).click()
+        click_element(driver, xpath)
     except Exception:
         pass
 
@@ -177,7 +175,7 @@ def login(driver, attempts=5, delay=20):
             driver.sleep(2)
             CHECKBOX_COORDS = (675, 720)
             pyautogui.click(*CHECKBOX_COORDS)
-            wait_element(driver, XPATHS["LOGIN_BUTTON"], timeout=10).click()
+            click_element(driver, XPATHS["LOGIN_BUTTON"], timeout=10)
             return
         
         except:
@@ -195,17 +193,19 @@ def select_category(driver, category_options, index, AWAY):
     max_retries = 3
     while retry_count < max_retries:
         try:
-            wait_element(driver, XPATHS["CATEGORY_DROPDOWN"]).click()
+            click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
             category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
             category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
             if category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name:
-                # print(f"Kategori {category_name} ({index + 1}/{len(category_options)}) dolu")
+                category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
+                print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
+                print("\nKATEGORİ DOLU")
                 return None
             
-            # print(f"\nKategori {category_name} ({index + 1}/{len(category_options)}) seçiliyor...")
+            driver.execute_script("arguments[0].scrollIntoView(true);", category_option)
             category_option.click()
             return category_name
         except Exception as error:
@@ -218,12 +218,13 @@ def select_category(driver, category_options, index, AWAY):
 # Selects a block from the dropdown menu
 def select_block(driver, block_options, index):
     try:
-        wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+        click_element(driver, XPATHS["BLOCK_OPTIONS"])
         block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
-
         block_option = block_options[index]
+        
         if block_option == wait_element(driver, XPATHS["NULL_OPTION"]):
             return None
+        
         driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
         block_option.click()
         print(f"\nBlok {block_option.text}")
@@ -236,17 +237,15 @@ def select_block(driver, block_options, index):
 def count_block_seats(driver):
     try:
         # Click on the seat map button
-        wait_element(driver, XPATHS["SEAT_MAP"]).click()
+        click_element(driver, XPATHS["SEAT_MAP"])
 
         # Handle the popup if it appears
         safe_click(driver, XPATHS["NO_SEATS_POPUP"])
         try:
             popup = wait_element(driver, XPATHS["NO_SEATS_POPUP"], timeout=5)
             if popup.is_displayed():
-                # print("Pencere kapatılıyor...")
                 popup.click()
-                driver.execute_script("arguments[0].scrollIntoView(true);", wait_element(driver, XPATHS["SEAT_MAP"]))
-                wait_element(driver, XPATHS["SEAT_MAP"]).click()
+                click_element(driver, XPATHS["SEAT_MAP"])
         except:
             pass
 
@@ -274,7 +273,7 @@ def process_block(driver, block_name, total_count, total_occupied):
         print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
 
     # Click 'Change seat'
-    wait_element(driver, XPATHS["CHANGE_SEAT"]).click()
+    click_element(driver, XPATHS["CHANGE_SEAT"])
     
     return total_count, total_occupied
 
@@ -286,7 +285,7 @@ def process_category(driver, category_name, total_count, total_occupied):
     
     # Select a block from the dropdown menu
     wait_element(driver, XPATHS["BLOCK_DROPDOWN"]).click()
-    wait_options(driver, XPATHS["BLOCK_OPTIONS"])
+    wait_element(driver, XPATHS["BLOCK_OPTIONS"])
     block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
 
     # Loop through all blocks
@@ -307,9 +306,8 @@ def count_seats(driver, AWAY):
     safe_click(driver, XPATHS["COOKIE_MESSAGE"])
 
     # Click the dropdown menu and wait for category options
-    wait_element(driver, XPATHS["CATEGORY_DROPDOWN"]).click()
-    driver.sleep(2)
-    wait_options(driver, XPATHS["CATEGORY_OPTIONS"])
+    click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
+    # wait_element(driver, XPATHS["CATEGORY_OPTIONS"])
     category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
 
     if AWAY:
@@ -329,9 +327,8 @@ def count_seats(driver, AWAY):
             total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
 
             # Re-open category dropdown
-            category_dropdown = wait_scroll(driver, XPATHS["CATEGORY_DROPDOWN"])
-            driver.execute_script("arguments[0].click();", category_dropdown)
-            wait_options(driver, XPATHS["CATEGORY_OPTIONS"])
+            click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
+            wait_element(driver, XPATHS["CATEGORY_OPTIONS"])
             category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
 
     return total_count, total_occupied, category_options
@@ -404,10 +401,7 @@ def main():
                     
                 # Click on the buy button
                 driver.sleep(2)
-                wait_scroll(driver, XPATHS["BUY_BUTTON"])
-                buy_button = wait_element(driver, XPATHS["BUY_BUTTON"])
-                driver.execute_script("arguments[0].scrollIntoView(true);", buy_button)
-                driver.execute_script("arguments[0].click();", buy_button)
+                click_element(driver, XPATHS["BUY_BUTTON"])
                 
                 # Sign in passo.com.tr
                 try:
