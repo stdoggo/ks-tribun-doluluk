@@ -196,9 +196,6 @@ def select_category(driver, category_options, index, AWAY):
             category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
-            category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
-            print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
-            
             # Skip if the category is occupied
             is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name
             if is_occupied:
