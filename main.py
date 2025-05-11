@@ -226,7 +226,7 @@ def select_block(driver, block_options, index):
         print(f"\nBlok {block_option.text}")
         return block_option.text
     except Exception as error:
-        print(f"Bloklar sayılırken hata\n{error}")
+        # print(f"Bloklar sayılırken hata\n{error}")
         return None
 
 # Count seats in the selected block
@@ -252,7 +252,7 @@ def count_block_seats(driver):
         return len(total), len(occupied)
 
     except Exception as error:
-        print(f"Koltuklar sayılırken hata: {error}")
+        # print(f"Koltuklar sayılırken hata: {error}")
         return 0, 0
 
 # Process block statistics
@@ -339,7 +339,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
         TOTAL_SEATS = opponent_capacity
     else:
         if len(category_options) >= 8:
-            TOTAL_SEATS = 31827 
+            TOTAL_SEATS = 31827 + 1775
         elif len(category_options) <= 7:
             TOTAL_SEATS = 23770
         else:
