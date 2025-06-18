@@ -158,7 +158,7 @@ def extract_match_details(driver):
         match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
 
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
-        ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
+        ticket = "Satılan kombine" if not AWAY else "Deplasman satılan bilet"
 
         return match_title, match_date, ticket, AWAY, opponent_capacity
     except Exception:
@@ -266,7 +266,7 @@ def process_block(driver, block_name, total_count, total_occupied):
         block_occupancy = (occupied / total) * 100
         bar_length = int(block_occupancy / 6.25)
         occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
-        print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
+        print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan kombine: {occupied} / {total} (Kalan: {total - occupied})")
 
     # Click 'Change seat'
     click_element(driver, XPATHS["CHANGE_SEAT"])
@@ -303,21 +303,23 @@ def count_seats(driver):
 
     # Click the dropdown menu and wait for category options
     click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
-    # wait_element(driver, XPATHS["CATEGORY_OPTIONS"])
+    driver.sleep(1)  # Add small delay
     category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
+    num_categories = len(category_options)
 
-    for i in range(len(category_options)):
-            category_name = select_category(driver, category_options, i)
-            
-            if not category_name:
-                continue
-
-            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
-
-            # Re-open category dropdown
+    for i in range(num_categories):
+        # Re-open category dropdown for each iteration
+        if i > 0:
             click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
-            wait_element(driver, XPATHS["CATEGORY_OPTIONS"])
+            driver.sleep(1)  # Add small delay
             category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
+            
+        category_name = select_category(driver, category_options, i)
+        
+        if not category_name:
+            continue
+
+        total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
 
     return total_count, total_occupied, category_options
 
@@ -327,7 +329,7 @@ def calculate_occupancy(driver):
     total_available = total_count - total_occupied
     
     # Determine the total seat number
-    TOTAL_SEATS = 25324
+    TOTAL_SEATS = 28271
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
@@ -372,7 +374,7 @@ def main():
                 #    pass 
 
                 # Calculate the occupancy rate
-                driver.execute_script("document.body.style.zoom='80%'")
+                driver.execute_script("document.body.style.zoom='70%'")
                 output, occupancy_rate, total_available = calculate_occupancy(driver)
     
     # Add more info
