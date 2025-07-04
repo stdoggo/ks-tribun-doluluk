@@ -384,7 +384,7 @@ def main():
         output += f" (Kalan: {total_available:,})"
         short_url = upload_to_gist()
         if short_url:
-            output += f"\nKalan bloklar: {short_url}"
+            output += f"\nKalan bloklar: {short_url}\n\n*Bazı koltuklar güvenlik, delegasyon vb. gerekçelerden dolayı satışa açılmayıp, dolu koltuk olarak gözükmektedir."
             
     return output
 
