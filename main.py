@@ -27,7 +27,7 @@ timezone = pytz.timezone("Europe/Istanbul")
 current_date = datetime.now(timezone).strftime("%Y-%m-%d %H:%M:%S")
 
 # URL
-URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=true"
+URL = "https://www.passo.com.tr/tr/ara?searchQuery=Kocaelispor&etkinlikdetayi=false"
 
 # XPaths
 XPATHS = {
@@ -46,10 +46,10 @@ XPATHS = {
     "OCCUPIED_SEATS": "//*[@class='seats']/*[@class='seat']/*[@fill='#7691a7']",
     "AVAILABLE_SEATS": "//*[@fill='#ffffff']",
     "CHANGE_SEAT": "//button[contains(text(),'Seçimi değiştir')]",
-    "MATCH_TITLE": "//div[@class='r-title' and contains(text(), 'Kocaelispor')]",
-    "MATCH_DATE": "//span[@class='r-date']",
-    "MATCH_TIME": "//span[@class='r-date']/div",
-    "MATCH_URL": f"//div[contains(text(),'Kocaelispor')]",
+    "MATCH_TITLE": "(//div[@class='r-title' and contains(text(), 'Kocaelispor')])[1]",
+    "MATCH_DATE": "(//span[@class='r-date'])[1]",
+    "MATCH_TIME": "//span[@class='r-date']/div[1]",
+    "MATCH_URL": "(//div[contains(text(),'Kocaelispor')])[1]",
     "NO_SEATS_POPUP": "//button[contains(text(),'Tamam')]",
     "COOKIE_MESSAGE": "//a[@aria-label='dismiss cookie message']",
     "PRIORITY": "//div[contains(text(),'Kongre')]"
@@ -154,13 +154,13 @@ def extract_match_details(driver):
 
         # Extract match details
         locale.setlocale(locale.LC_TIME, "tr_TR.UTF-8")
-        match_date_str = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
-        match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
+        # match_date_str = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
+        # match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
 
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
         ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
 
-        return match_title, match_date, ticket, AWAY, opponent_capacity
+        return match_title, ticket, AWAY, opponent_capacity
     except Exception:
         return None
     
@@ -197,7 +197,7 @@ def select_category(driver, category_options, index, AWAY):
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
-            is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" or "MİSAFİR" in category_name
+            is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" in category_name
             if is_occupied:
                 return None
             
@@ -372,7 +372,7 @@ def main():
                     wait_element(driver, XPATHS["MATCH_TITLE"], timeout=30)
                 except:
                     time.sleep(5)
-                    driver.refresh()
+                    driver.refresh()  
                     
                 # Check if there are any matches available
                 try:
@@ -384,12 +384,11 @@ def main():
                 
                 # Extract match details
                 match_details = extract_match_details(driver)
-                if not match_details: 
-                    return "Maç bulunamadı."
-                
-                match_title, match_date, ticket, AWAY, opponent_capacity = match_details
+                if not match_details:
+                    return "Maç detayları alınamadı."
+                match_title, ticket, AWAY, opponent_capacity = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
-                print(f"\nMaç: {match_title}\nTarih: {match_date}")
+                print(f"\nMaç: {match_title}")
         
                 # Click on the match
                 wait_element(driver, XPATHS["MATCH_URL"])
@@ -425,7 +424,7 @@ def main():
         if short_url:
             output += f"\nKalan bloklar: {short_url}"
             
-    return output, match_date
+    return output
 
 if __name__ == "__main__":
     print(main())
