@@ -223,7 +223,7 @@ def select_block(driver, block_options, index):
         
         driver.execute_script("arguments[0].scrollIntoView(true);", block_option)
         block_option.click()
-        print(f"\nBlok {block_option.text}")
+        print(f"\nBlok: {block_option.text}")
         return block_option.text
     except Exception as error:
         # print(f"Bloklar sayılırken hata\n{error}")
