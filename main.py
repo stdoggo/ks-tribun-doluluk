@@ -154,13 +154,12 @@ def extract_match_details(driver):
 
         # Extract match details
         locale.setlocale(locale.LC_TIME, "tr_TR.UTF-8")
-        # match_date_str = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
-        # match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
+        match_date = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
 
         match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
         ticket = "Satılan bilet" if not AWAY else "Deplasman satılan bilet"
 
-        return match_title, ticket, AWAY, opponent_capacity
+        return match_title, match_date, ticket, AWAY, opponent_capacity
     except Exception:
         return None
     
@@ -386,9 +385,9 @@ def main():
                 match_details = extract_match_details(driver)
                 if not match_details:
                     return "Maç detayları alınamadı."
-                match_title, ticket, AWAY, opponent_capacity = match_details
+                match_title, match_date, ticket, AWAY, opponent_capacity = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
-                print(f"\nMaç: {match_title}")
+                print(f"\nMaç: {match_title}\nTarih: {match_date}")
         
                 # Click on the match
                 wait_element(driver, XPATHS["MATCH_URL"])
