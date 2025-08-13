@@ -185,24 +185,39 @@ def login(driver, attempts=5, delay=20):
         
 # Selects a category from the dropdown menu
 def select_category(driver, category_options, index, AWAY):
-    
     retry_count = 0
     max_retries = 3
     while retry_count < max_retries:
         try:
+            # Click dropdown and wait for options to be visible
             click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
+            driver.sleep(1)
+            
+            # Get list of options
             category_options = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
+            if not category_options:
+                retry_count += 1
+                continue
+                
             category_option = category_options[-1 if AWAY else index]
             category_name = category_option.text.split(" - ")[0]
             
             # Skip if the category is occupied
-            is_occupied = category_option.get_attribute("class") == "dropdown-option disabled" in category_name
+            is_occupied = "disabled" in category_option.get_attribute("class")
             if is_occupied:
                 return None
             
             driver.execute_script("arguments[0].scrollIntoView(true);", category_option)
+            driver.sleep(0.5) 
             category_option.click()
-            return category_name
+            
+            # Verify selection was successful by checking if dropdown is closed
+            driver.sleep(1) 
+            dropdown = driver.find_elements(By.XPATH, XPATHS["CATEGORY_OPTIONS"])
+            if not dropdown or not dropdown[0].is_displayed():
+                return category_name
+            
+            retry_count += 1
         except Exception as error:
             # print(f"Kategori {index + 1} seçilemedi. Tekrar deneniyor ({retry_count + 1}/{max_retries})...\n{error}")
             retry_count += 1
@@ -313,7 +328,7 @@ def count_seats(driver, AWAY):
         if category_name:
             total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
     else:
-        for i in range(len(category_options)):
+        for i in range(len(category_options) - 1):
             category_name = select_category(driver, category_options, i, AWAY)
             
             if not category_name:
@@ -337,12 +352,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     if AWAY:
         TOTAL_SEATS = opponent_capacity
     else:
-        if len(category_options) >= 8:
-            TOTAL_SEATS = 31827 + 1775
-        elif len(category_options) <= 7:
-            TOTAL_SEATS = 23770
-        else:
-            TOTAL_SEATS = 31827
+        TOTAL_SEATS = 27963
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
@@ -411,7 +421,7 @@ def main():
                 #    pass 
 
                 # Calculate the occupancy rate
-                driver.execute_script("document.body.style.zoom='80%'")
+                driver.execute_script("document.body.style.zoom='70%'")
                 output, occupancy_rate, total_available = calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity)
     
     # Add more info
