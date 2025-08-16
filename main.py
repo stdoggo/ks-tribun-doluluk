@@ -282,8 +282,33 @@ def process_block(driver, block_name, total_count, total_occupied):
         occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
         print(f"{occupancy_bar} %{block_occupancy:.2f}\nSatılan bilet: {occupied} / {total} (Kalan: {total - occupied})")
 
-    # Click 'Change seat'
-    click_element(driver, XPATHS["CHANGE_SEAT"])
+    # Try to click 'Change seat' with retries
+    max_retries = 3
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            # Wait a moment for the button to appear
+            driver.sleep(1)
+            
+            # Try to find and click the change seat button
+            change_seat = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, XPATHS["CHANGE_SEAT"]))
+            )
+            driver.execute_script("arguments[0].click();", change_seat)
+            break
+        except Exception:
+            retry_count += 1
+            if retry_count == max_retries:
+                # If we can't find the button, try refreshing the page
+                driver.refresh()
+                driver.sleep(2)
+                # Reselect the block
+                click_element(driver, XPATHS["BLOCK_DROPDOWN"])
+                block_options = driver.find_elements(By.XPATH, XPATHS["BLOCK_OPTIONS"])
+                for option in block_options:
+                    if option.text == block_name:
+                        option.click()
+                        break
     
     return total_count, total_occupied
 
