@@ -31,6 +31,7 @@ def post_tweet():
     try:
         print("Twit atılıyor...")
         client.create_tweet(text=output)
+        print(output)
     except Exception as e:
         print(f"Twit atılırken hata: {e}")
 
