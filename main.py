@@ -122,7 +122,6 @@ def upload_to_gist():
         return None
 
 # Extract opponent name
-@lru_cache(maxsize=1)
 def extract_clubs(filename="club_list.csv"):
     try:
         clubs = []
@@ -275,6 +274,8 @@ def process_block(driver, block_name, total_count, total_occupied):
     total, occupied = count_block_seats(driver)
     total_count += total
     total_occupied += occupied
+    category_count += total
+    category_occupied += occupied
     
     if total > 0:
         block_occupancy = (occupied / total) * 100
@@ -310,10 +311,38 @@ def process_block(driver, block_name, total_count, total_occupied):
                         option.click()
                         break
     
-    return total_count, total_occupied
+    return total_count, total_occupied, category_count, category_occupied
+
+# Extract category capacities
+def extract_categories(filename="categories.csv"):
+    try:
+        categories = []
+        category_capacity = []
+        with open(filename, "r", encoding="utf-8") as file:
+            reader = csv.reader(file, delimiter=';')
+            for row in reader:
+                if len(row) >= 2:
+                    categories.append(row[0].strip())
+                    category_capacity.append(row[1].strip())
+        return categories, category_capacity
+    except OSError as error:
+        print(f"Dosya okunamadı\n{error}")
+        return [], []
 
 # Process category and its blocks
-def process_category(driver, category_name, total_count, total_occupied):
+def process_category(driver, category_name, total_count, total_occupied, AWAY, opponent_capacity):
+    category_count, category_occupied = 0, 0
+    
+    # Get category capacity based on home/away game
+    if AWAY:
+        category_capacity = opponent_capacity
+    else:
+        categories, capacities = extract_categories()
+        try:
+            category_capacity = int(next((cap for cat, cap in zip(categories, capacities) if cat == category_name), 0))
+        except ValueError:
+            category_capacity = 0
+    
     # Category header
     category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
     print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
@@ -329,12 +358,23 @@ def process_category(driver, category_name, total_count, total_occupied):
         if not block_name:
             continue
 
-        total_count, total_occupied = process_block(driver, block_name, total_count, total_occupied)
+        total_count, total_occupied, category_count, category_occupied = process_block(driver, block_name, total_count, total_occupied)
+        
+    category_full_blocks = category_capacity - category_count
+    category_occupied += category_full_blocks
+    category_occupancy = (category_occupied / category_capacity) * 100
+    bar_length = int(category_occupancy / 6.25)
+    occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
+    print("-" * 7 + "-" * len(category_name) + "-" * 7)
+    print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan bilet: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
+    
+    category_count, category_occupied = 0, 0
+       
     return total_count, total_occupied
 
 # Main function to count seats
-def count_seats(driver, AWAY):
+def count_seats(driver, AWAY, opponent_capacity):
     total_occupied, total_count = 0, 0
 
     # Dismiss cookie message if it appears
@@ -351,7 +391,7 @@ def count_seats(driver, AWAY):
         category_name = select_category(driver, category_options, index, AWAY)
 
         if category_name:
-            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
+            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied, AWAY, opponent_capacity)
     else:
         for i in range(len(category_options) - 1):
             category_name = select_category(driver, category_options, i, AWAY)
@@ -359,7 +399,7 @@ def count_seats(driver, AWAY):
             if not category_name:
                 continue
 
-            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied)
+            total_count, total_occupied = process_category(driver, category_name, total_count, total_occupied, AWAY, opponent_capacity)
 
             # Re-open category dropdown
             click_element(driver, XPATHS["CATEGORY_DROPDOWN"])
@@ -370,7 +410,7 @@ def count_seats(driver, AWAY):
 
 def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     # Calculate all seats
-    total_count, total_occupied, category_options = count_seats(driver, AWAY)
+    total_count, total_occupied, category_options = count_seats(driver, AWAY, opponent_capacity)
     total_available = total_count - total_occupied
     
     # Determine the total seat number

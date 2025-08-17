@@ -120,49 +120,6 @@ def upload_to_gist():
         return None
     except (RequestException, OSError):
         return None
-
-# Extract opponent name
-@lru_cache(maxsize=1)
-def extract_clubs(filename="club_list.csv"):
-    try:
-        clubs = []
-        capacities = []
-        with open(filename, "r", encoding="utf-8") as file:
-            reader = csv.reader(file, delimiter=';')
-            for row in reader:
-                if len(row) >= 2:
-                    clubs.append(row[0].strip())
-                    capacities.append(row[1].strip())
-        return clubs, capacities
-    except OSError as error:
-        print(f"Dosya okunamadı\n{error}")
-        return [], []
-
-def extract_match_details(driver):
-    try:
-        # Find match and extract the opponent details
-        clubs, capacity = extract_clubs()
-        match_text = wait_element(driver, XPATHS["MATCH_TITLE"]).text
-        opponent = next((club for club in clubs if club in match_text), "Takım bulunamadı")
-        opponent_capacity = int(next((capacity[i].replace(".", "").replace(",", "") for i, club in enumerate(clubs) if club == opponent), "0"))
-        
-        if "Spor" in opponent:
-            opponent = opponent.replace("Spor", "spor").replace(" ", "")
-
-        # Find out if it's home or away game
-        AWAY = match_text.split(" - ")[0].strip() != "Kocaelispor"
-
-        # Extract match details
-        locale.setlocale(locale.LC_TIME, "tr_TR.UTF-8")
-        match_date_str = wait_element(driver, XPATHS["MATCH_DATE"]).text.replace("\n", " ")
-        match_date = datetime.strptime(match_date_str, '%d %b %Y %H:%M').strftime('%Y-%m-%d %H:%M')
-
-        match_title = f"Kocaelispor - {opponent}" if not AWAY else f"{opponent} - Kocaelispor"
-        ticket = "Satılan kombine" if not AWAY else "Deplasman satılan bilet"
-
-        return match_title, match_date, ticket, AWAY, opponent_capacity
-    except Exception:
-        return None
     
 # Sign in passo.com.tr
 def login(driver, attempts=5, delay=20):
@@ -256,11 +213,15 @@ def count_block_seats(driver):
         return 0, 0
 
 # Process block statistics
-def process_block(driver, block_name, total_count, total_occupied):
+def process_block(driver, block_name, total_count, total_occupied, category_count=0, category_occupied=0):
+    
     # Calculate seats
     total, occupied = count_block_seats(driver)
     total_count += total
     total_occupied += occupied
+    
+    category_count += total
+    category_occupied += occupied
     
     if total > 0:
         block_occupancy = (occupied / total) * 100
@@ -271,10 +232,36 @@ def process_block(driver, block_name, total_count, total_occupied):
     # Click 'Change seat'
     click_element(driver, XPATHS["CHANGE_SEAT"])
     
-    return total_count, total_occupied
+    return total_count, total_occupied, category_count, category_occupied
+
+# Extract category capacities
+def extract_categories(filename="categories.csv"):
+    try:
+        categories = []
+        category_capacity = []
+        with open(filename, "r", encoding="utf-8") as file:
+            reader = csv.reader(file, delimiter=';')
+            for row in reader:
+                if len(row) >= 2:
+                    categories.append(row[0].strip())
+                    category_capacity.append(row[1].strip())
+        return categories, category_capacity
+    except OSError as error:
+        print(f"Dosya okunamadı\n{error}")
+        return [], []
 
 # Process category and its blocks
 def process_category(driver, category_name, total_count, total_occupied):
+    # Initialize category counters
+    category_count, category_occupied = 0, 0
+    
+    # Get category capacity based on home/away game
+    categories, capacities = extract_categories()
+    try:
+        category_capacity = int(next((cap for cat, cap in zip(categories, capacities) if cat == category_name), 0))
+    except ValueError:
+        category_capacity = 0
+        
     # Category header
     category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
     print(f"\n{category_header}\n====== {category_name} ======\n{category_header}")
@@ -290,7 +277,18 @@ def process_category(driver, category_name, total_count, total_occupied):
         if not block_name:
             continue
 
-        total_count, total_occupied = process_block(driver, block_name, total_count, total_occupied)
+        total_count, total_occupied, category_count, category_occupied = process_block(driver, block_name, total_count, total_occupied, category_count, category_occupied)
+        
+    category_full_blocks = category_capacity - category_count
+    category_occupied += category_full_blocks
+    category_occupancy = (category_occupied / category_capacity) * 100
+    bar_length = int(category_occupancy / 6.25)
+    occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+    
+    print("-" * 7 + "-" * len(category_name) + "-" * 7)
+    print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan kombine: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
+    
+    category_count, category_occupied = 0, 0
     
     return total_count, total_occupied
 
