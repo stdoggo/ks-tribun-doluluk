@@ -327,7 +327,7 @@ def calculate_occupancy(driver):
     total_available = total_count - total_occupied
     
     # Determine the total seat number
-    TOTAL_SEATS = 28271
+    TOTAL_SEATS = 27920
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count

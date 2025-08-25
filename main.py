@@ -269,11 +269,13 @@ def count_block_seats(driver):
         return 0, 0
 
 # Process block statistics
-def process_block(driver, block_name, total_count, total_occupied):
+def process_block(driver, block_name, total_count, total_occupied, category_count=0, category_occupied=0):
+    
     # Calculate seats
     total, occupied = count_block_seats(driver)
     total_count += total
     total_occupied += occupied
+    
     category_count += total
     category_occupied += occupied
     
@@ -328,7 +330,7 @@ def extract_categories(filename="categories.csv"):
     except OSError as error:
         print(f"Dosya okunamadı\n{error}")
         return [], []
-
+    
 # Process category and its blocks
 def process_category(driver, category_name, total_count, total_occupied, AWAY, opponent_capacity):
     category_count, category_occupied = 0, 0
@@ -358,8 +360,8 @@ def process_category(driver, category_name, total_count, total_occupied, AWAY, o
         if not block_name:
             continue
 
-        total_count, total_occupied, category_count, category_occupied = process_block(driver, block_name, total_count, total_occupied)
-        
+        total_count, total_occupied, category_count, category_occupied = process_block(driver, block_name, total_count, total_occupied, category_count, category_occupied)
+    
     category_full_blocks = category_capacity - category_count
     category_occupied += category_full_blocks
     category_occupancy = (category_occupied / category_capacity) * 100
@@ -417,7 +419,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     if AWAY:
         TOTAL_SEATS = opponent_capacity
     else:
-        TOTAL_SEATS = 27963
+        TOTAL_SEATS = 27920
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
