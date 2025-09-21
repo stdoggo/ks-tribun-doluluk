@@ -171,7 +171,7 @@ def login(driver, attempts=5, delay=20):
             wait_element(driver, XPATHS["PASSWORD_INPUT"], timeout=10).send_keys(PASSWORD)
             
             driver.sleep(2)
-            CHECKBOX_COORDS = (675, 720)
+            CHECKBOX_COORDS = (670, 715)
             pyautogui.click(*CHECKBOX_COORDS)
             click_element(driver, XPATHS["LOGIN_BUTTON"], timeout=10)
             return
@@ -419,7 +419,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     if AWAY:
         TOTAL_SEATS = opponent_capacity
     else:
-        TOTAL_SEATS = 27963
+        TOTAL_SEATS = 31827
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
