@@ -171,7 +171,7 @@ def login(driver, attempts=5, delay=20):
             wait_element(driver, XPATHS["PASSWORD_INPUT"], timeout=10).send_keys(PASSWORD)
             
             driver.sleep(2)
-            CHECKBOX_COORDS = (670, 715)
+            CHECKBOX_COORDS = (670, 730)
             pyautogui.click(*CHECKBOX_COORDS)
             click_element(driver, XPATHS["LOGIN_BUTTON"], timeout=10)
             return
