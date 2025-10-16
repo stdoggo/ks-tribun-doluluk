@@ -368,8 +368,9 @@ def process_category(driver, category_name, total_count, total_occupied, AWAY, o
     bar_length = int(category_occupancy / 6.25)
     occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
-    print("-" * 7 + "-" * len(category_name) + "-" * 7)
-    print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan bilet: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
+    if not AWAY:
+        print("-" * 7 + "-" * len(category_name) + "-" * 7)
+        print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan bilet: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
     
     category_count, category_occupied = 0, 0
        
