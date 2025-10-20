@@ -36,6 +36,6 @@ def post_tweet():
         print(f"Twit atılırken hata: {e}")
 
 # Main loop
-post_tweet() # debug
+post_tweet()
     
 
