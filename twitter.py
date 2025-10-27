@@ -37,5 +37,4 @@ def post_tweet():
 
 # Main loop
 post_tweet()
-    
 
