@@ -203,7 +203,8 @@ def select_category(driver, category_options, index, AWAY):
             
             # Skip if the category is occupied
             is_occupied = "disabled" in category_option.get_attribute("class")
-            if is_occupied:
+            is_loca = "LOCA" in category_option.text
+            if is_occupied or is_loca:
                 return None
             
             driver.execute_script("arguments[0].scrollIntoView(true);", category_option)
@@ -334,6 +335,7 @@ def extract_categories(filename="categories.csv"):
 # Process category and its blocks
 def process_category(driver, category_name, total_count, total_occupied, AWAY, opponent_capacity):
     category_count, category_occupied = 0, 0
+    NO_CAT_NAME = False
     
     # Get category capacity based on home/away game
     if AWAY:
@@ -343,7 +345,8 @@ def process_category(driver, category_name, total_count, total_occupied, AWAY, o
         try:
             category_capacity = int(next((cap for cat, cap in zip(categories, capacities) if cat == category_name), 0))
         except ValueError:
-            category_capacity = 0
+            category_capacity = 1
+            NO_CAT_NAME = True
     
     # Category header
     category_header = "=" * 7 + "=" * len(category_name) + "=" * 7
@@ -361,18 +364,19 @@ def process_category(driver, category_name, total_count, total_occupied, AWAY, o
             continue
 
         total_count, total_occupied, category_count, category_occupied = process_block(driver, block_name, total_count, total_occupied, category_count, category_occupied)
+        
+    if not NO_CAT_NAME:
+        category_full_blocks = category_capacity - category_count
+        category_occupied += category_full_blocks
+        category_occupancy = (category_occupied / category_capacity) * 100
+        bar_length = int(category_occupancy / 6.25)
+        occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
     
-    category_full_blocks = category_capacity - category_count
-    category_occupied += category_full_blocks
-    category_occupancy = (category_occupied / category_capacity) * 100
-    bar_length = int(category_occupancy / 6.25)
-    occupancy_bar = "█" * bar_length + "░" * (16 - bar_length)
+        if not AWAY:
+            print("-" * 7 + "-" * len(category_name) + "-" * 7)
+            print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan bilet: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
     
-    if not AWAY:
-        print("-" * 7 + "-" * len(category_name) + "-" * 7)
-        print(f"Kategori: {category_name}\n{occupancy_bar} %{category_occupancy:.2f}\nSatılan bilet: {category_occupied} / {category_capacity} (Kalan: {category_capacity - category_occupied})")
-    
-    category_count, category_occupied = 0, 0
+        category_count, category_occupied = 0, 0
        
     return total_count, total_occupied
 
@@ -420,7 +424,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     if AWAY:
         TOTAL_SEATS = opponent_capacity
     else:
-        TOTAL_SEATS = 31827+667
+        TOTAL_SEATS = 31827
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
