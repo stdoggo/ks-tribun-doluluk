@@ -420,7 +420,7 @@ def calculate_occupancy(driver, match_title, ticket, AWAY, opponent_capacity):
     if AWAY:
         TOTAL_SEATS = opponent_capacity
     else:
-        TOTAL_SEATS = 31827
+        TOTAL_SEATS = 31827+667
     
     # Subtract a fixed number from total count since full blocks are not available on the website
     full_blocks = TOTAL_SEATS - total_count
