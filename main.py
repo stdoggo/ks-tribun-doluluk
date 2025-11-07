@@ -466,7 +466,7 @@ def main():
                 # Extract match details
                 match_details = extract_match_details(driver)
                 if not match_details:
-                    return "Maç detayları alınamadı."
+                    return "hata"
                 match_title, match_date, ticket, AWAY, opponent_capacity = match_details
                 print(f"Veri tarihi: {current_date}\nNOT: Satışa açılan ve henüz dolmamış bloklar listelenmektedir.")
                 print(f"\nMaç: {match_title}\nTarih: {match_date}")
