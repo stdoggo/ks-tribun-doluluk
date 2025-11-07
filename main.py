@@ -459,9 +459,9 @@ def main():
                 try:
                     element = wait_element(driver, XPATHS["MATCH_TITLE"], timeout=10)
                     if not element.is_displayed():
-                        return "Maç bulunamadı."
+                        return "hata"
                 except:
-                    return "Maç bulunamadı."
+                    return "hata"
                 
                 # Extract match details
                 match_details = extract_match_details(driver)
